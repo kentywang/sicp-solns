@@ -60,3 +60,7 @@
 ;; 1000037 *** 97
 
 ;; And experimental results fall in line with those expectations.
+
+;; Post-completion edit: If we added a second argument of #f to the if in
+;; start-prime-test, then we could implement search-for-primes with a prime
+;; counter instead of a numeric range.
