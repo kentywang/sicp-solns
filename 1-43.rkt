@@ -26,6 +26,7 @@
 
 ;; Iterative
 (define (repeated-i f n)
+  
   (define (iter count composed-func)
     (if (= count n)
         composed-func
@@ -36,6 +37,7 @@
 ;; time = O(n)
 ;; space = O(1)
 
-;; Test
+;;; Tests
+
 ((repeated square 2) 5)
 ((repeated-i square 2) 5)
