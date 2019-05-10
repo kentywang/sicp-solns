@@ -1,0 +1,3 @@
+Louis's code's calls to expmod grows linearly to the value of the number to check, since in each recursive step it halves the input yet calls it twice.
+
+Edit: His code generates a tree of depth log n, and the runtime is exponential to the depth, so 2^(log n) = n.

@@ -1,0 +1,5 @@
+Using fast-expt version of expmod will mean successively larger multiplications and squarings and just one call of remainder. Using the default expmod will call remainder after each squaring, and while it incurs a small cost (remainders are cheaper than multiplication, I think), it helps keep the input small for the next squaring/multiplication. This adds up to making it much faster than fast-expt.
+
+So while they both have runtimes that grow logarithmically to the input value, one has operations that take much longer and slow it down tremendously compared to the other, even in spite of having fewer operations.
+
+Time complexity is only one factor of runtime.

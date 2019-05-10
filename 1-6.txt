@@ -1,0 +1,1 @@
+Applicative-order logic will mean each expression will be evaluated before applying new-if, so the alternate expression would be evaluated, leading to recursive loop.

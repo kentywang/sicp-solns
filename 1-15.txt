@@ -1,0 +1,4 @@
+1.	7 calls to p
+2.	Linear recursive process, so O(n) space and O(n) number of steps (each call only calls itself at most once).
+
+Edit: Actually 5 calls to p, and O(log n), since in each step the value of the next call is a third of the original value.

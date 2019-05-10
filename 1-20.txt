@@ -1,0 +1,36 @@
+Using the substitution method for normal-order evaluation:
+
+(gcd 206 40)
+↓
+(if (= 0 40)
+    206
+    (gcd 40 (mod 206 40)))
+↓
+(if (= 0 40)
+    206
+    (if (= 0 (mod 206 40))
+        40
+        (gcd (mod 206 40) (mod 40 (mod 206 40)))))
+↓
+...
+
+Since the procedure is recursive, it never stops expanding, and its operands never get evaluated. So remainder is never called.
+
+When we use applicative-order:
+
+(gcd 206 40)
+↓
+(if (= 0 40)
+    206
+    (gcd 40 (mod 206 40)))
+↓
+(gcd 40 (mod 206 40))
+↓
+(gcd 40 6)
+↓
+...
+
+Remainder (or mod) will eventually be called 4 times.
+
+Edit: Actually, the normal-order evaluation does terminate. The operands are evaluated after we reach the first "if" step since it is a primitive.
+http://community.schemewiki.org/?sicp-ex-1.20

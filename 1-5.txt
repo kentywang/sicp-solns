@@ -1,0 +1,4 @@
+Normal-order: since procedure p expands to itself, we never get to the evaluation step.
+Applicative-order: evaluates the predicate expression, and since it's true, the evaluates only the consequent expression 0 instead of the alternate p.
+
+Edit: Wrong. It’s the opposite.

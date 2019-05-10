@@ -1,0 +1,97 @@
+T(a,b) = (a+b,a)
+T^2(a,b) = T(T(a,b)) = (2a+b,a+b)
+T^3(a,b) = T(T^2(a,b)) = (3a+2b,2a+b)
+
+Fib(1): T(1,0) = (1,1) => 1
+Fib(2): T^2(1,0) = (2,1) => 1
+Fib(3): T^3(1,0) = T(T^2(1,0)) = T(2,1) = (3,2) => 2
+Fib(4): T^4(1,0) = T(T^3(1,0)) = T(3,2) = (5,3) => 3
+
+T(a,b,p,q) = (bq+aq+ap,bp+aq,p,q)
+T^2(a,b,p,q) = T(T(a,b,p,q)) = ((bp+aq)q+(bq+aq+ap)q+(bq+aq+ap)p,
+                                (bp+aq)p+(bq+aq+ap)q,
+                                p,
+                                q)
+                             = (bpq+aqq + bqq+aqq+apq + bpq+apq+app,
+                                bpq+apq + bpq+aqq+apq,
+                                p,
+                                q)
+                             = (ap^2+2apq+2aq^2+2bpq+bq^2,     [1]
+                                2apq+aq^2+2bpq,                [2]
+                                p,
+                                q)
+                             = T(a,b,p’,q’)
+                             = (bq’+aq’+ap’,bp’+aq’,p’,q’)     [3]
+
+On [1],[2], and [3], replacing a with 1, b with 0, and making each entry equal one another, we get:
+
+q’ = q^2 + 2pq
+q’ + p’ = p^2 + 2pq + 2q^2
+
+Then p’ can be solved to:
+
+p’ = p^2
+
+No, this is not it, since p always simplifies to 0 and q to 1.
+
+I also tried:
+
+bq’ + aq’ + ap’ = 2a + b
+bp’ + aq’ = a + b
+
+But this doesn’t get me definitions for p’ and q’ in terms of p and q.
+
+So I now try equating:
+
+T(1,0,0,1) with second T NOT setting p=0 or q=1, so something like T(T(1,0,0,1),p,q)
+
+to:
+
+T(1,0,p’,q’)
+
+So my equation is now:
+
+q’ = p + p
+q’ + p’ = 2q + b
+
+Solving for q’ and p’:
+
+q’ = p + q
+p’ = q
+
+Looks similar to a <- a + b, b <- a.
+
+#lang sicp
+
+(define (even? x) (= (remainder x 2) 0))
+
+(define (fib-iter a b p q count)
+  (cond ((= count 0)
+         b)
+        ((even? count)
+         (fib-iter a
+                   b
+                   q ;compute p'
+                   (+ p q) ;compute q'
+                   (/ count 2)))
+        (else
+         (fib-iter (+ (* b q)
+                      (* a q)
+                      (* a p))
+                   (+ (* b p)
+                      (* a q))
+                   p
+                   q
+                   (- count 1)))))
+
+(define (fib n)
+  (fib-iter 1 0 0 1 n))
+
+But this only works until fib(7), where it gets you 8. On fib(8), it returns 3. And fib(4) is wrong too.
+
+Edit: For p’ and q’, apply the transformation T(a,b,p,q) twice (so deriving [1] and [2]), then group by a and b,
+leaving b(p^2 + q^2) + a(2pq + q^2) for the second value in the pair. Since the by the same rules that is equal to bp’ + aq’, then
+p’ = p^2 + q^2 and q’ = 2pq + q^2.
+
+For understanding how squaring halves the steps, see that T^n = (T^2)^(n/2)
+http://community.schemewiki.org/?sicp-ex-1.19

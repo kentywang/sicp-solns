@@ -1,0 +1,20 @@
+A small numbers will mean the threshold 0.001 is magnified, so the end value may not be precise enough.
+A large number will mean the procedure can take many calls to fall within the threshold.
+A stopping condition that checks the fraction between the current and previous guess is below a threshold should work equally well for small and large numbers.
+
+(define (good-enough? curr prev)
+  (> (if (> curr prev)
+         (/ prev curr)
+         (/ curr prev))
+     0.99))
+
+(define (sqrt-iter guess last x)
+  (if (good-enough? guess last)
+      guess
+      (sqrt-iter (improve guess x) guess x)))
+
+(define (sqrt x)
+  (sqrt-iter 1.0 x x))
+
+Large numbers may never terminate because floats have a fixed precision. After a certain point, the guesses are unable to guess the square root of a number within 0.001 of the answer. At that point, they alternate between the two guesses, both of whose squares are more than 0.001 away from the argument.
+     3))
