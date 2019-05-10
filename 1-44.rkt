@@ -33,3 +33,4 @@
 ;;; Test
 
 ((smooth square) 2)
+(((repeated smooth 15) square) 2)
