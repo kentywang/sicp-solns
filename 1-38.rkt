@@ -23,7 +23,7 @@
           1)))
   
   (cont-frac (lambda (x) 1)
-             (lambda (x) (denom x))
+             denom
              k))
 
 ;; k: 1  2  3  4  5  6  7  8  9 10 11
