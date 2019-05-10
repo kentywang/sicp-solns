@@ -15,7 +15,7 @@
 ;;; Main
 
 (define (euler k)
-  
+
   (define (denom i)
     (let ((shifted (+ i 1)))
       (if (= (remainder shifted 3) 0)
