@@ -33,3 +33,6 @@
 ;; k=1: 1/1 = 1.0 
 ;; k=2: 1/(1+(1/2)) = 0.67
 ;; k=3: 1/(1+(1/(2+(1/1))) = 0.75
+
+;; Edit: I could’ve used (= (remainder k 3) 2) as the check and (/ (+ 1 k) 1.5)
+;; as the transform for the denom.

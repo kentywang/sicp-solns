@@ -43,5 +43,8 @@
 ((dd (dd inc)) 5)
 
 ;; 1 double:  calls f twice
-;; 2 doubles: calls double on double, so f called 2^2 = 4 times
-;; 3 doubles: calls dd on dd, so f called 2^2^2 = 16 times
+;; 2 doubles: calls double on double, so f called 2 x 2 = 4 times
+;; 3 doubles: calls dd on dd, so f called 4 x 4 = 16 times
+
+;; Edit: Just realizing it’s ((double (double (double (double inc)))) 5) is
+;; enough to understand why it’s 16, not 8.
