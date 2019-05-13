@@ -56,10 +56,13 @@
           ((expt? 2 prod)
            (log prod 2)) ; Could DRY this
           (else
-           (iter (/ prod 2) (+ a 1)))))    ; Reduce prod by 2 and try again.
+           ;; I did (/ prod 2) here first, and while it worked, it’s much less
+           ;; efficient (despite being the same big O) since we keep the
+           ;; product much larger.
+           (iter (/ prod 6) (+ a 1)))))    ; Reduce a and b by 1 and try again.
   (iter c 0))
 
-;; time = O(a) [worst case, happens when a = b]
+;; time = O(min(a, b)) [worst case, happens when a = b > 0]
 ;; space = O(1)
 
 (define (cdr c)
@@ -69,7 +72,7 @@
           ((expt? 3 prod)
            (log prod 3))
           (else
-           (iter (/ prod 3) (+ b 1)))))
+           (iter (/ prod 6) (+ b 1)))))
   (iter c 0))
 
 ;;; Tests
@@ -81,3 +84,12 @@
 (define w (cons 11 7))
 (car w)
 (cdr w)
+
+;; Edit: If a > 0 and b = 0, then product is even. If a = 0 and b > 0, then
+;; product is odd. Not sure if that really helps. Anyways, online solutions
+;; seem to be simply checking if it’s divisible by 2 or 3, which is enough to
+;; determine if there is another 2 or 3 in the product.
+
+;; Also, my code doesn’t work on some cases, like (car (cons 150 200)).
+;; The best solution I found is here:
+;; https://codereview.stackexchange.com/questions/152924/sicp-exercise-2-5-represent-pairs-of-nonnegative-integers
