@@ -64,3 +64,69 @@
 (width (div-interval a b))
 
 ;;; 2-10
+
+(define (div-interval-2 x y)
+  (let ((upper-y (upper-bound y))
+        (lower-y (lower-bound y)))
+    (if (or (= 0 upper-y)
+            (= 0 lower-y))
+        (error "Bound cannot be 0, since division by 0 is undefined." y)
+        (mul-interval x 
+                      (make-interval 
+                       (/ 1.0 (upper-bound y)) 
+                       (/ 1.0 (lower-bound y)))))))
+
+;; Test
+(define c (make-interval 0 1))
+; (div-interval-2 a c)
+
+;;; 2-11
+
+(define (mul-interval-2 x y)
+  (let ((upper-x (upper-bound x))
+        (lower-x (lower-bound x))
+        (upper-y (upper-bound y))
+        (lower-y (lower-bound y)))
+    (cond ((and (> lower-x 0)                   ; 1. ++ ++
+                (> upper-x 0)
+                (> lower-y 0)
+                (> upper-y 0))
+           (make-interval (* lower-x lower-y)
+                          (* upper-x upper-y)))
+          ((and (< lower-x 0)                   ; 2. -+ ++
+                (> upper-x 0)
+                (> lower-y 0)
+                (> upper-y 0))
+           (make-interval (* lower-x upper-y)
+                          (* upper-x upper-y)))
+          ((and (< lower-x 0)                   ; 3. -- ++
+                (< upper-x 0)
+                (> lower-y 0)
+                (> upper-y 0))
+           (make-interval (* lower-x upper-y)
+                          (* upper-x lower-y)))
+          ((and (< lower-x 0)                   ; 4. -- -+
+                (< upper-x 0)
+                (< lower-y 0)
+                (> upper-y 0))
+           (make-interval (* lower-x upper-y)
+                          (* upper-x lower-y)))
+          ((and (< lower-x 0)                   ; 5. -- --
+                (< upper-x 0)
+                (< lower-y 0)
+                (< upper-y 0))
+           (make-interval (* lower-x lower-y)
+                          (* upper-x upper-y)))
+          ((and (< lower-x 0)                   ; 6. -+ -+
+                (> upper-x 0)
+                (< lower-y 0)
+                (> upper-y 0))
+           (make-interval (min (* lower-x upper-y)
+                               (* upper-x lower-y))
+                          (max (* lower-x lower-y)
+                               (* upper-x upper-y))))
+          (else                                 ; Mirror cases for 2, 3, 4
+           (mul-interval-2 y x)))))
+
+;; Test
+(mul-interval-2 a b)
