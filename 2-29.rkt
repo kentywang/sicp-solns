@@ -42,17 +42,52 @@
            structure))))
 
 ;; Trying without a helper inner def
-(define (balanced? mobile)
+(define (balanced?2 mobile)
   (if (pair? mobile)
       (let ((l (left-branch mobile))
             (r (right-branch mobile)))
         (and (= (torque l)
                 (torque r))
-             (and (balanced? (branch-structure l))
-                  (balanced? (branch-structure r)))))
+             (and (balanced?2 (branch-structure l))
+                  (balanced?2 (branch-structure r)))))
         true)) ;; Weight is always balanced.
 
 ;; time = O(n^2), since redundant torque calls.
+;; space = O(n)
+
+;; Faster implementation:
+(define (balanced? mobile)
+  (define (print-torques a b)
+    (display "Left torque: ")
+    (display a)
+    (newline)
+    (display "Right torque: ")
+    (display b)
+    (newline))
+  (define (weight-if-balanced m)
+    (let ((l (left-branch m))
+          (r (right-branch m)))
+      (let ((sl (branch-structure l))
+            (sr (branch-structure r))
+            (ll (branch-length l))
+            (lr (branch-length r)))
+        (let ((wl (if (pair? sl)
+                      (weight-if-balanced sl)
+                      sl))
+              (wr (if (pair? sr)
+                      (weight-if-balanced sr)
+                      sr)))
+          (let ((tl (* ll wl))
+                (tr (* lr wr)))
+            (print-torques tl tr)
+            (if (and (not (= tl 0))
+                     (not (= tr 0))
+                     (= tl tr))
+                (+ wl wr) ; Return sum of weights, not torque.
+                0)))))) ; Only way to notify call stack below that unbalanced?
+  (not (= 0 (weight-if-balanced mobile))))
+
+;; time = O(n)
 ;; space = O(n)
 
 ;;; 4. If we changed the constructors to this:
