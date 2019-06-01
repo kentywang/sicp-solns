@@ -90,3 +90,6 @@
 ;; the alternative clause of the if expression.
 
 ;; http://wiki.drewhess.com/wiki/SICP_exercise_2.57
+
+;; I think the performance should be similar, except that my solution would
+;; do more work upfront and call augend more times.
