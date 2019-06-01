@@ -79,4 +79,14 @@
 (deriv '(+ x 3) 'x)
 (deriv '(+ x 3 x) 'x)
 (deriv '(+ x 3 (* x 2)) 'x)
+(deriv '(+ x x x x) 'x)
 (deriv '(* x y (+ x 3)) 'x)
+
+;; Edit: I don't actually need to do recursion and call make-sum from augend or
+;; mutiplicand to get a fully expanded expression, since deriv will be applied
+;; to the subexpressions of a sum or product.
+
+;; A simple (cons '+ (all-but-first-term s)))) is all augend needs to return in
+;; the alternative clause of the if expression.
+
+;; http://wiki.drewhess.com/wiki/SICP_exercise_2.57
