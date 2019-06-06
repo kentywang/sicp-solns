@@ -24,7 +24,7 @@
   (successive-merge 
    (make-leaf-set pairs)))
 
-;;; Main
+;;; 2.68
 
 (define (successive-merge pairs)
   (cond ((null? pairs) '())
@@ -37,3 +37,30 @@
 ;;; Tests
 
 (generate-huffman-tree '((A 8) (B 3) (C 1) (D 1) (E 1) (F 1) (G 1) (H 1)))
+
+;;; 2.69
+
+(define t
+  (generate-huffman-tree
+   '((A 2)
+     (NA 16)
+     (BOOM 1)
+     (SHA 3)
+     (GET 2)
+     (YIP 9)
+     (JOB 2)
+     (WAH 1))))
+
+(define m
+  '(GET A JOB
+    SHA NA NA NA NA NA NA NA NA
+    GET A JOB
+    SHA NA NA NA NA NA NA NA NA
+    WAH YIP
+    YIP YIP YIP YIP YIP YIP YIP YIP
+    SHA BOOM))
+
+(length (encode m t))
+
+;; 1. 84 symbols.
+;; 2. 8 symbols, so log2(8) = 3 bits. The message would be 3 * 36 = 108 bits long.
