@@ -1,4 +1,5 @@
-#lang sicp
+#lang racket
+(provide (all-defined-out))
 
 ;;; Deps
 
@@ -84,7 +85,7 @@
 
 (define (encode-symbol sym tree)
   (cond ((null? tree) (error "null tree: ENCODE-SYMBOL"))
-        ((leaf? tree) nil) ; We already have the bit, so finish the list.
+        ((leaf? tree) '()) ; We already have the bit, so finish the list.
         ((element-of-set? sym (symbols (left-branch tree)))
          (cons 0 (encode-symbol sym (left-branch tree))))
         ((element-of-set? sym (symbols (right-branch tree)))
