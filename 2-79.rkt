@@ -21,5 +21,7 @@
 
 ;;; Tests
 (equ? 3 3)
-(equ? (make-rational 2 3) (make-rational 4 6))
-(equ? (make-complex-from-real-imag 3 4) (make-complex-from-real-imag 3 4))
+(equ? (make-rational 2 3)
+      (make-rational 4 6))
+(equ? (make-complex-from-real-imag 3.0 4)
+      (make-complex-from-real-imag 3 4))

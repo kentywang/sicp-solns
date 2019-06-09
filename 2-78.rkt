@@ -160,7 +160,16 @@
        (lambda (x y) (tag (div-rat x y))))
   (put 'make 'rational
        (lambda (n d) (tag (make-rat n d))))
+  ;; Needed for 2.79
+  (put 'numer '(rational) numer)
+  (put 'denom '(rational) denom)
   'done)
+
+;; Needed for 2.79
+(define (numer z)
+  ((get 'numer '(rational)) z))
+(define (denom z)
+  ((get 'denom '(rational)) z))
 
 (define (make-rational n d)
   ((get 'make 'rational) n d))
