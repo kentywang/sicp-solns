@@ -4,21 +4,10 @@
 (define (=zero? y) (apply-generic '=zero? y))
 
 (define (install-zero-package)
-  (put '=zero? '(scheme-number)
-       (lambda (x) (= x 0)))
-  ;; Can compare simplified against unsimplified forms.
-  (put '=zero? '(rational)
-       (lambda (x)
-         (= (numer x) 0)))
-  ;; If we just use equal here like for the rationals, we can't compare
-  ;; across rectangular/polar forms the internals of the complex package
-  ;; doesn't handle it.
-  ;; This probably doesn't work well in actuality because of rounding
-  ;; inacurracy.
-  (put '=zero? '(complex)
-       (lambda (x)
-         (and (= (real-part x) 0)
-              (= (imag-part x) 0)))))
+  ;; (zero? x) is like (= x 0)
+  (put '=zero? '(scheme-number) zero?)
+  (put '=zero? '(rational) (lambda (x) (zero? (numer x))))
+  (put '=zero? '(complex) (lambda (x) (zero? (magnitude x)))))
 
 (install-zero-package)
 
