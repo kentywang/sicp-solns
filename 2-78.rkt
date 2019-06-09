@@ -1,4 +1,5 @@
 #lang racket
+(provide (all-defined-out))
 
 ;;; Deps
 
@@ -211,6 +212,11 @@
   (put 'make-from-mag-ang 'complex
        (lambda (r a) 
          (tag (make-from-mag-ang r a))))
+  ;; From 2.77
+  (put 'real-part '(complex) real-part)
+  (put 'imag-part '(complex) imag-part)
+  (put 'magnitude '(complex) magnitude)
+  (put 'angle '(complex) angle)
   'done)
 
 (install-rectangular-package)
