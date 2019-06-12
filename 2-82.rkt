@@ -301,7 +301,7 @@
 (install-coercion-package) 
 
 ;;; Tests
-;(coerce-all '(1))
+(coerce-all '(1))
 (coerce-all (list 4
                   (make-complex-from-real-imag 3 2)))
 (coerce-all (list 4
