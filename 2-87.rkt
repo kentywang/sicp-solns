@@ -1,7 +1,7 @@
 #lang racket
 (require "2-78.rkt")
 
-; New deps
+;; New deps
 
 (define (install-polynomial-package)
   ;; internal procedures
@@ -78,32 +78,71 @@
   (define (order term) (car term))
   (define (coeff term) (cadr term))
 
-  ;; (define (add-poly p1 p2) …)
-  ;; ⟨procedures used by add-poly⟩
-  ;; (define (mul-poly p1 p2) …)
-  ;; ⟨procedures used by mul-poly⟩
+  (define (add-poly p1 p2)
+    (if (same-variable? (variable p1) 
+                        (variable p2))
+        (make-poly 
+         (variable p1)
+         (add-terms (term-list p1)
+                    (term-list p2)))
+        (error "Polys not in same var: 
+              ADD-POLY"
+               (list p1 p2))))
+  
+  ;; 2.88
+  (define (sub-poly p1 p2)
+    (add-poly p1 (neg-poly p2)))
+  
+  (define (neg-poly p)
+    (define (iter trms)
+      (if (empty-termlist? trms)
+          trms
+          (let ((t1 (first-term trms)))
+            (adjoin-term (make-term (order t1) (negate (coeff t1)))
+                         (iter (rest-terms trms))))))
+    (make-poly (variable p) (iter (term-list p))))
+
+  (define (mul-poly p1 p2)
+    (if (same-variable? (variable p1) 
+                        (variable p2))
+        (make-poly 
+         (variable p1)
+         (mul-terms (term-list p1)
+                    (term-list p2)))
+        (error "Polys not in same var: 
+              MUL-POLY"
+               (list p1 p2))))
 
   ;; interface to rest of the system
   (define (tag p) (attach-tag 'polynomial p))
-  ;; (put 'add '(polynomial polynomial)
-  ;;      (lambda (p1 p2) 
-  ;;        (tag (add-poly p1 p2))))
-  ;; (put 'mul '(polynomial polynomial)
-  ;;      (lambda (p1 p2) 
-  ;;        (tag (mul-poly p1 p2))))
+  (put 'add '(polynomial polynomial)
+       (lambda (p1 p2) 
+         (tag (add-poly p1 p2))))
+  (put 'sub '(polynomial polynomial)
+       (lambda (p1 p2) 
+         (tag (sub-poly p1 p2))))
+  (put 'mul '(polynomial polynomial)
+       (lambda (p1 p2) 
+         (tag (mul-poly p1 p2))))
   (put 'make 'polynomial
        (lambda (var terms) 
          (tag (make-poly var terms))))
-  ;; Main
+  ;; 2.87
   (put '=zero? '(polynomial)
        (lambda (n)
          (empty-termlist? (term-list n))))
+  ;; 2.88
+  (put 'negate '(polynomial)
+       (lambda (p)
+         (tag (neg-poly p))))
+       
+  (put 'negate '(scheme-number) -)
   "Installed polynomial package")
 
 (define (make-polynomial var terms)
   ((get 'make 'polynomial) var terms))
 
-; Other deps
+;; Other deps
 
 (define (=zero? y) (apply-generic '=zero? y))
 
@@ -117,8 +156,22 @@
 (install-polynomial-package)
 (install-zero-package)
 
-; Tests
-(define p (make-polynomial 'x '((3 4) (1 2) (0 1)))) ; 4x^3 + 2x + 1
-(=zero? p)
+;; New
+(define (negate x) (apply-generic 'negate x))
 
-(=zero? (make-polynomial 'x '()))
+;;; Tests
+
+(define p (make-polynomial 'x '((3 4) (1 2) (0 1)))) ; 4x^3 + 2x + 1
+(define q (make-polynomial 'x '()))
+(define r (make-polynomial 'y '()))
+(define s (make-polynomial 'y (list (list 2 p) '(1 3))))
+
+;; 2.87
+(=zero? p)
+(=zero? q)
+
+;; 2.88
+(sub p p)
+(sub q p)
+(sub s s)
+(sub r s)
