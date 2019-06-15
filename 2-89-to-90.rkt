@@ -163,8 +163,6 @@
 (define (install-dense-terms-package)
   ;; representation of terms and term lists
   (define (add-terms L1 L2)
-    ;; (print (list L1 L2))
-    ;; (newline)
     (cond ((empty-termlist? L1) L2)
           ((empty-termlist? L2) L1)
           (else
@@ -180,25 +178,23 @@
                     (adjoin-term (first-term L1)
                                  (add-terms (rest-terms L1)
                                             L2))))))))
-  ;; (define (mul-terms L1 L2)
-  ;;   (if (empty-termlist? L1)
-  ;;       (the-empty-termlist)
-  ;;       (add-terms
-  ;;        (mul-term-by-all-terms
-  ;;         (first-term L1) L2)
-  ;;        (mul-terms (rest-terms L1) L2))))
+  (define (mul-terms L1 L2)
+    (if (empty-termlist? L1)
+        (the-empty-termlist)
+        (add-terms
+         (mul-term-by-all-terms
+          (- (length L1) 1) (first-term L1) L2) ; Could be optimized.
+         (mul-terms (rest-terms L1) L2))))
 
-  ;; (define (mul-term-by-all-terms t1 L)
-  ;;   (if (empty-termlist? L)
-  ;;       (the-empty-termlist)
-  ;;       (let ((t2 (first-term L)))
-  ;;         (adjoin-term
-  ;;          (make-term
-  ;;           (+ (order t1) (order t2))
-  ;;           (mul (coeff t1) (coeff t2)))
-  ;;          (mul-term-by-all-terms
-  ;;           t1
-  ;;           (rest-terms L))))))
+  (define (mul-term-by-all-terms order t1 L)
+    (define (add-zeros x)
+      (if (zero? x)
+          '()
+          (cons 0 (add-zeros (- x 1)))))
+    (if (empty-termlist? L)
+        (the-empty-termlist)
+        (append (map (lambda (x) (* t1 x)) L)
+                (add-zeros order))))
 
   (define (adjoin-term term term-list)
     (cons term term-list))
@@ -218,9 +214,9 @@
   (put 'add '(dense dense)
        (lambda (t1 t2)
          (tag (add-terms t1 t2))))
-  ;; (put 'mul '(dense dense)
-  ;;      (lambda (t1 t2)
-  ;;        (tag (mul-terms t1 t2))))
+  (put 'mul '(dense dense)
+       (lambda (t1 t2)
+         (tag (mul-terms t1 t2))))
   (put 'negate '(dense)
        (lambda (t)
          (tag (neg-terms t))))
@@ -270,7 +266,7 @@
 (sub s s)
 (sub r s)
 
-;; 2.89
+;; 2.89, 2.90
 (define t (make-polynomial 'x (make-dense '(4 0 2 1)))) ; 4x^3 + 2x + 1
 (define u (make-polynomial 'x (make-dense '())))
 (define v (make-polynomial 'y (make-dense '())))
@@ -281,3 +277,8 @@
 (sub t t)
 (sub t x)
 (sub x t)
+
+(mul p q)
+(mul t u)
+(mul p p)
+(mul t t)
