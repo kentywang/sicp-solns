@@ -189,3 +189,43 @@
 ;(add 1 p)
 (add p t)
 ;(add p u)
+
+; Notes:
+; 1 + 
+; 3y^2 + 
+; (5x^4 + 7x^6) + 
+; (x^9 + 3x^2)y^8 +
+; (2z + 4z^3)y^2 +
+; ((7x^6 + 9x^8)z^5 + 2z)y^3
+
+; (poly y (0 1) ; A
+;         (2 3) ; B
+;         (0 (poly x (4 5) (6 7))) ; C
+;         (8 (poly x (9 1) (2 3))) ; D
+;         (2 (poly z (1 2) (3 4))) ; E
+;         (3 (poly z (5 (poly x (6 7) (8 9))) (1 2)))) ; F
+
+; (poly x (0 1) ; A
+;         (0 (poly y (2 3))) ; B
+;         (4 5) ; C
+;         (6 7) ; C
+;         (9 (poly y (8 1))) ; D
+;         (2 (poly y (8 3))) ; D
+;         (0 (poly y (2 (poly z (1 2) (3 4)))) ; E
+;         ;; Inner F becomes:
+; (poly y (3 (poly x (6 (poly z (5 7)))
+;                    (8 (poly z (5 9)))
+;                    (0 (poly z (1 2)))))
+;         ;; F becomes:
+; (poly x (6 (poly y (3 (poly z (5 7)))))
+;         (8 (poly y (3 (poly z (5 9)))))
+;         (0 (poly y (3 (poly z (1 2))))))
+
+; It might be easier to create polys and add them instead of terms and merging them.
+
+; num             : (poly x (0 num))
+; (poly x (any))  : ...
+; (poly y (0 num)): (coerce x num) 
+; (poly y (0 pol)): (coerce x pol)
+; (poly y (2 num)): (poly x (0 ...))
+; (poly y (2 poly): (poly x (
