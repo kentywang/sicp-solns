@@ -15,6 +15,21 @@
     (and (variable? v1)
          (variable? v2)
          (eq? v1 v2)))
+  (define (adjoin-term term term-list)
+    (if (=zero? (coeff term))
+        term-list
+        (cons term term-list)))
+  (define (the-empty-termlist) '())
+  (define (first-term term-list) (car term-list))
+  (define (rest-terms term-list) (cdr term-list))
+  (define (empty-termlist? term-list) 
+    (null? term-list))
+  (define (make-term order coeff) 
+    (list order coeff))
+  (define (order term) (car term))
+  (define (coeff term) (cadr term))
+  ;; interface to rest of the system
+  (define (tag p) (attach-tag 'polynomial p))
 
   ;; representation of terms and term lists
   (define (add-terms L1 L2)
@@ -66,34 +81,68 @@
             t1 
             (rest-terms L))))))
 
-  (define (adjoin-term term term-list)
-    (if (=zero? (coeff term))
-        term-list
-        (cons term term-list)))
-  (define (the-empty-termlist) '())
-  (define (first-term term-list) (car term-list))
-  (define (rest-terms term-list) (cdr term-list))
-  (define (empty-termlist? term-list) 
-    (null? term-list))
-  (define (make-term order coeff) 
-    (list order coeff))
-  (define (order term) (car term))
-  (define (coeff term) (cadr term))
+  (define (mul-poly p1 p2)
+    (if (same-variable? (variable p1) 
+                        (variable p2))
+        (make-poly 
+         (variable p1)
+         (mul-terms (term-list p1)
+                    (term-list p2)))
+        (error "Polys not in same var: 
+              MUL-POLY"
+               (list p1 p2))))
 
-  ;; 2.92
-  (define (coerce-to var poly)
-    (define (swap-terms p)
-      (let ((var (variable p))
-            (ts (term-list p)))
-        (map (lambda (t)
-                   ;(if (eq? (type-tag t)
-                   ;         'polynomial)
-                   ;  ()
-                   ;; Term not polynomial, so order 0.
-                   ;; TODO: Need to unwrap type tag.
-                   (make-term 0 (make-polynomial var (list t))))
-                 ts)))
-    (make-poly var (swap-terms poly))) ; Not sorted. Or merged.
+  (put 'add '(polynomial polynomial)
+       (lambda (p1 p2) 
+         (tag (add-poly p1 p2))))
+  (put 'mul '(polynomial polynomial)
+       (lambda (p1 p2) 
+         (tag (mul-poly p1 p2))))
+  (put 'make 'polynomial
+       (lambda (var terms) 
+         (tag (make-poly var terms))))
+  (put '=zero? '(polynomial)
+       (lambda (n)
+         (empty-termlist? (term-list n))))
+
+  ;;; 2.92: These next three procs need some more work.
+  ;;; Not sorted, and need to handle nested type tags.
+
+  (define (coerce-poly to-var x)
+    (cond ((eq? to-var (variable x)) x)
+          (else
+           (accumulate add-poly
+                       '()
+                       (map
+                        (lambda (t)
+                          (coerce-term
+                           to-var
+                           (variable x)
+                           t)
+                          (term-list x)))))))
+
+  (define (coerce-term to-var curr t)
+    (let ((curr-ord (order t))
+          (cof (coeff-t)))
+      (cond ((and (= 0 curr-ord) (number? cof))
+             (make-poly to-var (list (make-term 0 cof))))
+            ((and (not (= 0 curr-ord)) (number? cof))
+             (make-poly to-var (list (make-term 0 (make-poly curr t)))))
+            ((and (= 0 curr-ord) (polynomial? cof))
+             (coerce-poly to-var cof))
+            ((and (not (= 0 curr-ord) (polynomial? cof)))
+             (if (eq? to-var (variable cof))
+                 (make-poly to-var (swap curr-ord cof))
+                 (coerce-term to-var curr (make-term curr-ord (coerce-poly to-var cof))))))))
+
+  (define (swap outer-order outer-var poly)
+    (map (lambda (t)
+           (make-term (order t)
+                      (make-poly
+                       outer-var
+                       (make-term outer-order
+                                  (coeff t)))))
+         (term-list poly)))
 
   (define (add-poly p1 p2)
     (if (same-variable? (variable p1) 
@@ -107,37 +156,19 @@
          (variable p1)
          (add-terms (term-list p1)
                     (term-list (coerce-to (variable p1) p2))))))
- 
-  (define (mul-poly p1 p2)
-    (if (same-variable? (variable p1) 
-                        (variable p2))
-        (make-poly 
-         (variable p1)
-         (mul-terms (term-list p1)
-                    (term-list p2)))
-        (error "Polys not in same var: 
-              MUL-POLY"
-               (list p1 p2))))
 
-  ;; interface to rest of the system
-  (define (tag p) (attach-tag 'polynomial p))
-  (put 'add '(polynomial polynomial)
-       (lambda (p1 p2) 
-         (tag (add-poly p1 p2))))
-  (put 'mul '(polynomial polynomial)
-       (lambda (p1 p2) 
-         (tag (mul-poly p1 p2))))
-  (put 'make 'polynomial
-       (lambda (var terms) 
-         (tag (make-poly var terms))))
-  ;; 2.87
-  (put '=zero? '(polynomial)
-       (lambda (n)
-         (empty-termlist? (term-list n))))
-  ;; 2.92
+  ;; 2.92, not the best approach.
+  (define scheme-number->polynomial
+    (lambda (p1 p2) 
+         (let ((var (variable p2)))
+           (tag (add-poly (make-poly var (list (make-term 0 p1)))
+                          p2)))))
   (put 'add '(scheme-number polynomial)
-       (lambda (p1 p2) 
-         (tag (add-poly p1 p2))))
+       (lambda (p1 p2)
+         (scheme-number->polynomial p1 p2)))
+  (put 'add '(polynomial scheme-number)
+       (lambda (p1 p2)
+         (scheme-number->polynomial p2 p1)))
   "Installed polynomial package")
 
 (define (make-polynomial var terms)
@@ -155,5 +186,6 @@
 (define u (make-polynomial 'y `((1 ,p))))
 
 ;; 2.92
+;(add 1 p)
 (add p t)
 ;(add p u)
