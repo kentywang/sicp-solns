@@ -238,14 +238,13 @@
 ;        (gcd-terms b (remainder-terms a b))))
 
   ;; 2.97: 1.
-  (define (reduce-terms n d)
-    (let ((gcdiv (gcd-terms (term-list n) (term-list d))))
+ (define (reduce-terms n d)
+    (let ((gcdiv (gcd-terms n d)))
       (let ((fact (make-term 0
                              (expt (coeff (first-term gcdiv))
-                                   (+ 1 (- (max (order (first-term n))
+                                   (add 1 (sub (max (order (first-term n))
                                                 (order (first-term d)))
-                                           (order (first-term gcdiv)))))))
-            (int-gcd (simplify-terms (append n d))))
+                                           (order (first-term gcdiv))))))))
         (let ((new-n (mul-term-by-all-terms fact n))
               (new-d (mul-term-by-all-terms fact d)))
 ;          (print (list "fact:" fact))(newline)
@@ -253,8 +252,9 @@
 ;          (print (list "gcdiv" gcdiv))(newline)
 ;          (print (list "new-n" new-n))(newline)
 ;          (print (list "new-d" new-d))(newline)
-          (list (car (div-terms (car (div-terms new-n gcdiv)) int-gcd))
-                (car (div-terms (car (div-terms new-d gcdiv)) int-gcd)))))))
+          (list (car (div-terms new-n gcdiv))      ; Edit: We don't need to simplify again
+                (car (div-terms new-d gcdiv))))))) ; here, since gcdiv already did it.
+
 
   (define (reduce-poly p1 p2)
     (if (same-variable? (variable p1) 
@@ -353,7 +353,9 @@
   ;; 2.97: 2.
   (put 'reduce '(polynomial polynomial)
        (lambda (p1 p2)
-         (tag (reduce-poly p1 p2))))
+         (let ((rr (reduce-poly p1 p2)))
+           (list (tag (car rr))
+                 (tag (cadr rr))))))
   "Installed polynomial package")
 
 (define (install-zero-package)
@@ -443,13 +445,21 @@
 ;;; 2.97
 
 (define p4
-  (make-polynomial 'x '((1 1) (0 1))))
-(define p5 
-  (make-polynomial 'x '((3 1) (0 -1))))
-(define p6 
-  (make-polynomial 'x '((1 1))))
-(define p7 
   (make-polynomial 'x '((2 1) (0 -1))))
-(define rf1 (make-rational p4 p5))
-(define rf2 (make-rational p6 p7))
+(define p5
+  (make-polynomial 'x '((3 1) (0 -1))))
+(define rf (make-rational p5 p4))
+rf
+(add rf rf)
+
+(define p6
+  (make-polynomial 'x '((1 1) (0 1))))
+(define p7
+  (make-polynomial 'x '((3 1) (0 -1))))
+(define p8
+  (make-polynomial 'x '((1 1))))
+(define p9 
+  (make-polynomial 'x '((2 1) (0 -1))))
+(define rf1 (make-rational p6 p7))
+(define rf2 (make-rational p8 p9))
 (add rf1 rf2)
