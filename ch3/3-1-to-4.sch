@@ -1,0 +1,63 @@
+;; 3.1
+(define (make-accumulator stored)
+  (lambda (curr)
+    (set! stored (+ stored curr))
+    stored))
+
+;; 3.2
+(define (make-monitored f)
+  (let ((call-count 0))
+    (lambda (m)
+      (cond ((eq? m 'how-many-calls?) call-count)
+            ((eq? m 'reset-count)
+             (begin (set! call-count 0)
+                    "Reset count."))
+            (else
+             (set! call-count (+ call-count 1))
+             (f m))))))
+
+;; 3.3
+(define (make-account balance pw)
+  (define (withdraw amount)
+    (if (>= balance amount)
+        (begin (set! balance (- balance amount))
+               balance)
+        "Insufficient funds"))
+  (define (deposit amount)
+    (set! balance (+ balance amount))
+    balance)
+  (define (incorrect-pw amount) "Incorrect password.")
+  (define (dispatch m o)
+    (if (eq? o pw)
+        (cond ((eq? m 'withdraw) withdraw)
+              ((eq? m 'deposit) deposit)
+              (else (error "Unknown request -- MAKE-ACCOUNT"
+                           m)))
+        incorrect-pw))
+  dispatch)
+
+;; 3.4
+(define (make-account balance pw)
+  (define (withdraw amount)
+    (if (>= balance amount)
+        (begin (set! balance (- balance amount))
+               balance)
+        "Insufficient funds"))
+  (define (deposit amount)
+    (set! balance (+ balance amount))
+    balance)
+  (define (call-the-cops) "You dun goofed")
+  (let ((wrong-count 0))
+    (define (incorrect-pw amount)
+      (begin (set! wrong-count (+ wrong-count 1))
+             (if (<= wrong-count 7)
+                 "Incorrect password"
+                 (call-the-cops))))
+    (define (dispatch m o)
+      (if (eq? o pw)
+          (cond ((eq? m 'withdraw) withdraw)
+                ((eq? m 'deposit) deposit)
+                (else (error "Unknown request -- MAKE-ACCOUNT"
+                             m)))
+          incorrect-pw))
+    dispatch))
