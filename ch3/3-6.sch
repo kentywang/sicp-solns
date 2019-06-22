@@ -1,14 +1,18 @@
-(define rand
-  (let ((seed (random 100))
-        (a (random 100))
+(define rand-update
+  (let ((a (random 100))
         (b (random 100))
         (m (random 100)))
+    (lambda (x)
+      (modulo (+ (* a x) b) m))))
+
+(define rand
+  (let ((seed (random 100)))
     (lambda (op)
       (cond ((eq? op 'reset)
              (lambda (new-value)
                (set! seed new-value)))
             ((eq? op 'generate)
-             (set! seed (modulo (+ (* a seed) b) m))
+             (set! seed (rand-update seed))
              seed)
             (else
              (error "Op not recognized: RAND" op))))))
