@@ -1,0 +1,5 @@
+Binary tree approach to key-value pairs: Each node has key, value, left,
+and right pointers. Tree sorted so each node on the left subtree's key has
+a smaller key than the current node's, and similarly for the right.
+
+Iteration should be O(log n).
