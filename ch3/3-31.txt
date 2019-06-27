@@ -1,0 +1,6 @@
+To propagate the current (not future) signal. Were it removed, then on progagation, the half-
+adder's inverter would not invert the 0, so the end of the first step (setting input-1 to 1)
+would have sum = 0 (unexpected) and carry = 0 (expected). The next step (setting input-2 to 1)
+would then set carry = 1 (expected) and leave sum untouched at 0 (expected).
+
+Edit: actually, answer is it wouldn't even run, since nothing gets added to agenda.
