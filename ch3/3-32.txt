@@ -1,0 +1,6 @@
+Right after setting one input-1 to 1, the and-gate's add-action-procedure is triggered, which
+queues up the output signal (as 1, since input-2 is still 1). Subsequently, when input-2 is
+changed to 0, the add-action-procedure is triggered again, this time queuing up the output to
+0. So when the queue processes, the correct output of 0 is last returned. Were it a stack, the
+first output would be the final return, but it would be incorrect as it was operation on an
+incompletely-updated set of inputs.
