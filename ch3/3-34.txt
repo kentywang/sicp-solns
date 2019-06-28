@@ -1,0 +1,3 @@
+The functionality is sound except that the multiplier constraint needs 2
+connectors with values defined in order to produce the third, and to go
+from b to a, we only have 1 value, b.
