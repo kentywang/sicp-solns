@@ -88,3 +88,9 @@ versus the two steps in the exchange procedure.
 [1] While there are two statements in the step, each are secure in that they
 produce the same effect whether another action on the account occurs before
 or after (provided no overdraft occurs).
+
+3.45:
+If the serialized withdraw and deposit procedures are exported, then calling
+a serialized exchange procedure would have those serialized withdraw/deposit
+procedures within its body, which wouldn't run since they're in the same
+serialized set. The execution would hang.
