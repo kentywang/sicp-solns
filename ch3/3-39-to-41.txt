@@ -28,3 +28,8 @@ And many more permutations that return the same values. Suffice to say,
 this is unmanageable.
 
 Were it serialized, only 1,000,000 is a possibility.
+
+3.41:
+With or without serialization of withdrawal and deposits, there shouldn't
+be a need to serialize read access of account balance because it cannot
+affect the other processes, even if it interleaves with them.
