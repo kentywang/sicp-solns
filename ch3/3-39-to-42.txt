@@ -39,3 +39,5 @@ The problem with this is that while different serialized procedures behave
 the same in a concurrency situation, a procedure can be interleaved with
 another of its kind. For instance, withdrawals can be interleaved with
 other withdrawals.
+Edit: Consensus says I'm wrong. There's no issue with Ben's code.
+
