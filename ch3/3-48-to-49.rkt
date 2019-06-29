@@ -40,3 +40,14 @@
                           MAKE-ACCOUNT"
                            m))))
       dispatch)))
+
+;; 3.49
+;; If some procedure B relied on accessing a shared resource A to
+;; complete B and another procedure relied on a shared resource B to
+;; complete A.
+
+;; Edit:
+;; "The question hints that this mechanism can fail when we only realise
+;; what other resources we need access to once we’ve acquired a lock –
+;; the most obvious example of this is database mutations."
+;; -- wizardbook.wordpress.com/2010/12/19/exercise-3-49/
