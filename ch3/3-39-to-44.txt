@@ -74,3 +74,17 @@ End balances:
 A: $100, B: $0, C: $100
 
 There is now $99,899 missing.
+
+3.44:
+(define 
+  (transfer from-account to-account amount)
+  ((from-account 'withdraw) amount)
+  ((to-account 'deposit) amount))
+
+Because the amount is "precomputed" (in the sense that it is decided ahead of
+time, not during execution), there is only one step[1] to this procedure,
+versus the two steps in the exchange procedure.
+
+[1] While there are two statements in the step, each are secure in that they
+produce the same effect whether another action on the account occurs before
+or after (provided no overdraft occurs).
