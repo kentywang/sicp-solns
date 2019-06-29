@@ -40,6 +40,11 @@
              ))) ; How do we get check mutex without getting stuck in wait?
     the-semaphore))
 
+;; Edit: I'm thinking of the problem in the wrong way. Instead of creating n
+;; mutexes, I really just need one mutex and use it to atomically set a variable
+;; for the number of free spots left. Think of a mutex as a way to stop time and
+;; perform an action.
+
 (define (make-sempaphore-2b n)
   (define (make-list-length n)
     (if (= n 0)
