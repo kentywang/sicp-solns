@@ -94,3 +94,8 @@ If the serialized withdraw and deposit procedures are exported, then calling
 a serialized exchange procedure would have those serialized withdraw/deposit
 procedures within its body, which wouldn't run since they're in the same
 serialized set. The execution would hang.
+
+3.46:
+If test-and-set! wasn't atomic, then if process 1 (P1) tested the mutex to be
+free, then P2 did the same and acquired it, then P1 and P2 would both freed
+from the-mutex dispatch procedure and be allowed to run.
