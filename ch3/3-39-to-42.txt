@@ -33,3 +33,9 @@ Were it serialized, only 1,000,000 is a possibility.
 With or without serialization of withdrawal and deposits, there shouldn't
 be a need to serialize read access of account balance because it cannot
 affect the other processes, even if it interleaves with them.
+
+3.42:
+The problem with this is that while different serialized procedures behave
+the same in a concurrency situation, a procedure can be interleaved with
+another of its kind. For instance, withdrawals can be interleaved with
+other withdrawals.
