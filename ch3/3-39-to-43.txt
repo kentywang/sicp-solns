@@ -1,0 +1,76 @@
+3.39:
+100, 121, 101
+Edit: 11 too?
+
+3.40:
+(define x 10)
+(parallel-execute 
+ (lambda () (set! x (* x x)))
+ (lambda () (set! x (* x x x))))
+
+Legend:
+P1: first process
+P2: second process
+A: access first x
+B: access second x
+C: access third x
+S: set x
+
+P1, P2: 1,000,000
+P2, P1: 1,000,000
+P1_A, P2_A_B_C_S, P1_B_S: 10,000
+P1_A, P2_A, P1_B_S, P2_B_C_S: 100,000
+P1_A, P2_A_B, P1_B_S, P2_C_S: 10,000
+P1_A, P2_A_B_C, P1_B_S, P2_S: 1,000
+P1_A_B, P2_A_B_C_S, P1_S: 100
+
+And many more permutations that return the same values. Suffice to say,
+this is unmanageable.
+
+Were it serialized, only 1,000,000 is a possibility.
+
+3.41:
+With or without serialization of withdrawal and deposits, there shouldn't
+be a need to serialize read access of account balance because it cannot
+affect the other processes, even if it interleaves with them.
+
+3.42:
+The problem with this is that while different serialized procedures behave
+the same in a concurrency situation, a procedure can be interleaved with
+another of its kind. For instance, withdrawals can be interleaved with
+other withdrawals.
+Edit: Consensus says I'm wrong. There's no issue with Ben's code.
+
+3.43:
+After any number of serial exchanges, the only numbers to swap are 10, 20, and
+30, so it stands that those are the only balances that are possible.
+
+This condition is violated in the following scenario:
+A: $0, B: $100, C: $0
+
+1. A and B accessed to compute diff of -100.
+2. B and C accessed and swapped. B now $0, C now $100.
+3. A withdrawn -100, now $100.
+4. B deposited -100, now -$100.
+
+End balances:
+A: $100, B: -$100, C: $100
+
+Notice that this still preserves the total amount among the accounts (even if
+some balances don't make sense). This is because the assignments of the
+account balances are always by difference of their current balance to the
+amount specified, rather than atomic set! operations.
+
+Were individual accounts not serialized, then there could be interleaving such
+as this:
+A: $0, B: $100, C: $99999
+1. For exchange(A, B), diff is computed to be -100.
+2. For withdraw(A, -100), A is accessed, and set to $100.
+3. For deposit(B, -100), B is accessed ($100) to compute 0.
+4. exchange(B, C) starts and completes. B now $99999, C now $100.
+5. B is set to $0.
+
+End balances:
+A: $100, B: $0, C: $100
+
+There is now $99,899 missing.
