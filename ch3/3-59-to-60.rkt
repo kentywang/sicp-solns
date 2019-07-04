@@ -33,6 +33,9 @@
    (lambda (x) (* x factor))
    stream))
 
+(define (add-streams s1 s2) 
+  (stream-map + s1 s2))
+
 ;;; Main 1.
 
 (define (div-streams a b)
@@ -69,3 +72,15 @@
 
 (enum cosine-series 10)
 (enum sine-series 10)
+
+;;; 3.60
+(define (mul-series s1 s2)
+  (stream-cons (* (stream-first s1)
+                  (stream-first s2))
+               (add-streams (mul-series (stream-cons 0 (stream-rest s1)) s2)
+                            (mul-series s1 (stream-cons 0 (stream-rest s2))))))
+
+;;; Tests
+
+(enum (add-streams (mul-series sine-series sine-series)
+                   (mul-series cosine-series cosine-series)) 5)
