@@ -74,13 +74,46 @@
 (enum sine-series 10)
 
 ;;; 3.60
-(define (mul-series s1 s2)
+
+(define (mul-series-bad s1 s2)
   (stream-cons (* (stream-first s1)
                   (stream-first s2))
-               (add-streams (mul-series (stream-cons 0 (stream-rest s1)) s2)
-                            (mul-series s1 (stream-cons 0 (stream-rest s2))))))
+               (add-streams (mul-series-bad (stream-cons 0 (stream-rest s1)) s2)
+                            (mul-series-bad s1 (stream-cons 0 (stream-rest s2))))))
+
+;; Edit: Correct answer:
+(define (mul-series s1 s2)
+  (stream-cons (* (stream-first s1) (stream-first s2))
+               (add-streams (scale-stream (stream-rest s2) (stream-first s1)) 
+                                        (mul-series (stream-rest s1) s2))))
 
 ;;; Tests
 
 (enum (add-streams (mul-series sine-series sine-series)
                    (mul-series cosine-series cosine-series)) 5)
+
+;;; 3.61
+
+(define (invert-unit-series s)
+  (define x
+    (stream-cons 1 (scale-stream (mul-series x (stream-rest s))
+                                 -1)))
+  x)
+
+
+;;; Tests
+
+(enum (mul-series cosine-series (invert-unit-series cosine-series)) 5)
+
+;;; 3.62
+
+(define (div-series a b)
+  (if (zero? (stream-first b))
+      (error "Denomiator constant zero: DIV-SERIES" a b)
+      (mul-series a (invert-unit-series (scale-stream b (/ 1 (stream-first b)))))))
+
+(define tangent-series (div-series sine-series cosine-series))
+
+;;; Tests
+
+(enum tangent-series 8)
