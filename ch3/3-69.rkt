@@ -126,23 +126,29 @@
   (let ((t (pairs (pairs integers integers)
                   integers))) ; k >= j, so need inner pair as 1st arg
     (define (recur s)
-      (cons-stream (append (car (stream-car s))
+      (cons-stream (append (car (stream-car s)) ; Spreads the inner list.
                            (cdr (stream-car s)))
                    (recur (stream-cdr s))))
     (recur t)))
 
-(define pyth-trips
-  (stream-filter (lambda (e)
-                   (= (square (caddr e))
-                      (+ (square (car e))
-                         (square (cadr e)))))
-                 tripint))
+;; Problem with this implementation: It tries to prime the first element,
+;; and the search is long because the order is not well-constructed. It
+;; goes through k quickly while i and j barely budge.
+
+;; (define pyth-trips
+;;   (stream-filter (lambda (e)
+;;                    (display e)
+;;                    (newline)
+;;                    (= (square (caddr e))
+;;                       (+ (square (car e))
+;;                          (square (cadr e)))))
+;;                  tripint))
 
 ;;; Tests
 
-;; (stream-ref tripint 0)
-;; (stream-ref tripint 1)
-;; (stream-ref tripint 2)
+(stream-ref tripint 0)
+(stream-ref tripint 1)
+(stream-ref tripint 2)
 ;; (stream-ref tripint 3)
 ;; (stream-ref tripint 4)
 ;; (stream-ref tripint 5)
