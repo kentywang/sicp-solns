@@ -1,0 +1,24 @@
+Without the local variable, enumerating just the nth element of
+(sqrt-stream x) would require recomputation of the 1st element, 2nd element,
+..., nth element, meaning there would be n(n+1)/2 operations to enumerate
+from the 1st to the nth element. I believe the space complexity grows also
+quaduatically with respect to n, since a stack of sqrt-streams is formed.
+
+With the local variable, the reference to the original stream is passed
+along, so space complexity is kept linear to the length of the sequence.
+
+Even with local variables, however if there is no memoization, the
+recompulation still occurs, so there's O(n^2) time complexity. Memoization
+allows each enumeration operation to cost 1 operation, meaning it's O(n).
+
+There isn't even a cost to enumerating to the memoized element in the
+sequence since the enumeration happens back-to-back with the computation of
+each next element.
+
+Thus, memoization would improve the time complexity of the original
+approach, but would it improve the space complexity? It would not affect
+either the time or space complexities of Louis's approach, since the
+original reference is never passed in the recursions.
+
+Edit: Actually, Louis's version is exponential in time? Don't know about
+space complexity. Should run a test and check the actual runtime!
