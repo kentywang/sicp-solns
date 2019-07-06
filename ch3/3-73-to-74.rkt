@@ -76,7 +76,7 @@
           (recur (stream-cdr s) (+ c 1)))))
   (recur s 0))
 
-;;; Main
+;;; 3.73
 
 (define (RC R C dt)
   (lambda (i v0)
@@ -89,3 +89,9 @@
 
 (define RC1 (RC 5 1 0.5))
 (print 10 (RC1 integers 3))
+
+;;; 3.74
+(define zero-crossings
+  (stream-map sign-change-detector
+              sense-data
+              (cons-stream 0 sense-data)))
