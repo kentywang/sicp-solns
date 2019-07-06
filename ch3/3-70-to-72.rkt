@@ -212,4 +212,30 @@
 
 ;;; Tests
 (newline)
-(print 5 ramanujan)
+(print 6 ramanujan)
+
+;;; 3.72
+(define sq-sum
+  (lambda (a b) (+ (expt a 2)
+                   (expt b 2))))
+
+(define sq-sum-pairs
+  (weighted-pairs integers integers sq-sum))
+
+(define trip-sq-sum
+  (let ((s sq-sum-pairs))
+    (define (recur t)
+      (let* ((sqs (apply sq-sum (stream-car t)))
+             (next (stream-car (stream-cdr t)))
+             (after (stream-car (stream-cdr (stream-cdr t))))
+             (next-sum (apply sq-sum next))
+             (after-sum (apply sq-sum after)))
+        (if (= sqs next-sum after-sum)
+            (cons-stream (list (stream-car t) next after)
+                         (recur (stream-cdr (stream-cdr (stream-cdr t)))))
+            (recur (stream-cdr t)))))
+    (recur s)))
+
+;;; Tests
+(newline)
+(print 5 trip-sq-sum)
