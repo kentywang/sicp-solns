@@ -91,7 +91,28 @@
 (print 10 (RC1 integers 3))
 
 ;;; 3.74
+
 (define zero-crossings
   (stream-map sign-change-detector
               sense-data
               (cons-stream 0 sense-data)))
+
+;;; 3.75
+
+;; Louis was declaring the current average to be average of the last
+;; average and the current value. That's wrong. It should be the average
+;; of the last _value_ and the current value.
+
+;; We will need to add an additional argument to keep track of the previous
+;; average, which is still used by sign-change-detector.
+
+(define (make-zero-crossings
+         input-stream last-value last-avg)
+  (let ((avpt
+         (/ (+ (stream-car input-stream)
+               last-value)
+            2)))
+    (cons-stream
+     (sign-change-detector avpt last-avg)
+     (make-zero-crossings
+      (stream-cdr input-stream) (stream-car input-stream) avpt))))
