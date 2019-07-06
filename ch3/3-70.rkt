@@ -122,67 +122,63 @@
 
 ;;; Main
 
-(define tripint
-  (let ((t (pairs (pairs integers integers)
-                  integers))) ; k >= j, so need inner pair as 1st arg
-    (define (recur s)
-      (cons-stream (append (car (stream-car s)) ; Spreads the inner list.
-                           (cdr (stream-car s)))
-                   (recur (stream-cdr s))))
-    (recur t)))
+(define (merge-weighted s1 s2 weight) ; Inputs are streams of list pairs.
+  (cond ((stream-null? s1) s2)
+        ((stream-null? s2) s1)
+        (else
+         (let* ((s1car (stream-car s1))
+                (s2car (stream-car s2))
+                (w1 (apply weight s1car))
+                (w2 (apply weight s2car)))
+           (cond ((< w1 w2)
+                  (cons-stream
+                   s1car
+                   (merge-weighted (stream-cdr s1)
+                                   s2
+                                   weight)))
+                 (else ; Deals with tie case.
+                  (cons-stream
+                   s2car
+                   (merge-weighted s1
+                                   (stream-cdr s2)
+                                   weight))))))))
 
-;; Problem with this implementation: It tries to prime the first element,
-;; and the search is long because the order is not well-constructed. It
-;; goes through k quickly while i and j barely budge.
+(define (weighted-pairs s t weighing-func)
+  (cons-stream
+   (list (stream-car s) (stream-car t))
+   (merge-weighted
+    (stream-map (lambda (x)
+                  (list (stream-car s) x))
+                (stream-cdr t))
+    (pairs (stream-cdr s) (stream-cdr t))
+    weighing-func)))
 
-;; (define pyth-trips
-;;   (stream-filter (lambda (e)
-;;                    (display e)
-;;                    (newline)
-;;                    (= (square (caddr e))
-;;                       (+ (square (car e))
-;;                          (square (cadr e)))))
-;;                  tripint))
+;; 1.
+(define pairs-by-sum
+  (weighted-pairs integers integers (lambda (a b) (+ a b))))
+
+;; 2.
+(define pairs-by-hamming
+  (let ((not-hamming?
+         (lambda (element)
+           (not (or (zero? (remainder element 2))
+                    (zero? (remainder element 3))
+                    (zero? (remainder element 5)))))))
+    (weighted-pairs (stream-filter not-hamming? integers)
+                    (stream-filter not-hamming? integers)
+                    (lambda (a b) (+ (* 2 a)
+                                     (* 3 b)
+                                     (* 5 a b))))))
+
+;; Helper for testing
+(define (print n s)
+  (if (> n 0)
+      (begin (display (stream-car s))
+             (newline)
+             (print (- n 1) (stream-cdr s)))))
 
 ;;; Tests
 
-(stream-ref tripint 0)
-(stream-ref tripint 1)
-(stream-ref tripint 2)
-;; (stream-ref tripint 3)
-;; (stream-ref tripint 4)
-;; (stream-ref tripint 5)
-;; (stream-ref tripint 6)
-;; (stream-ref tripint 7)
-;; (stream-ref tripint 8)
-;; (stream-ref tripint 9)
-;; (stream-ref tripint 10)
-
-;; Edit: This is more efficient. Why though?
-(define (triples s t u)
-  (cons-stream
-   (list
-    (stream-car s)
-    (stream-car t)
-    (stream-car u))
-   (interleave
-    (stream-map
-     (lambda (x) (cons (stream-car s) x))
-     (stream-cdr (pairs t u)))
-    (triples
-     (stream-cdr s)
-     (stream-cdr t)
-     (stream-cdr u)))))
-
-(define pyth-trips
-  (stream-filter (lambda (t)
-                   (= (+ (square (car t))
-                         (square (cadr t)))
-                      (square (caddr t))))
-                 (triples integers integers integers) ))
-
-(stream-ref pyth-trips 0)
-(stream-ref pyth-trips 1)
-(stream-ref pyth-trips 2)
-(stream-ref pyth-trips 3)
-(stream-ref pyth-trips 4)
+(print 20 pairs-by-sum)
+(newline)
+(print 20 pairs-by-hamming)
