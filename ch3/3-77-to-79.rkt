@@ -75,3 +75,16 @@
 
 (stream-ref
  (solve-2nd 2 3 0.001 4 0.02) 100)
+
+;;; 3.79
+
+(define (solve-2nd-general f dt y0 dy0)
+  (define y (integral (delay dy) y0 dt))
+  (define dy (integral (delay ddy) dy0 dt))
+  (define ddy (stream-map f dy y))
+  y)
+
+;;; Tests
+
+(stream-ref
+ (solve-2nd-general + 0.001 5 6) 10)
