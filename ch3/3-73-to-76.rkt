@@ -92,10 +92,10 @@
 
 ;;; 3.74
 
-(define zero-crossings
-  (stream-map sign-change-detector
-              sense-data
-              (cons-stream 0 sense-data)))
+;; (define zero-crossings
+;;   (stream-map sign-change-detector
+;;               sense-data
+;;               (cons-stream 0 sense-data)))
 
 ;;; 3.75
 
@@ -106,13 +106,34 @@
 ;; We will need to add an additional argument to keep track of the previous
 ;; average, which is still used by sign-change-detector.
 
-(define (make-zero-crossings
-         input-stream last-value last-avg)
-  (let ((avpt
-         (/ (+ (stream-car input-stream)
-               last-value)
-            2)))
-    (cons-stream
-     (sign-change-detector avpt last-avg)
-     (make-zero-crossings
-      (stream-cdr input-stream) (stream-car input-stream) avpt))))
+;; (define (make-zero-crossings
+;;          input-stream last-value last-avg)
+;;   (let ((avpt
+;;          (/ (+ (stream-car input-stream)
+;;                last-value)
+;;             2)))
+;;     (cons-stream
+;;      (sign-change-detector avpt last-avg)
+;;      (make-zero-crossings
+;;       (stream-cdr input-stream) (stream-car input-stream) avpt))))
+
+;;; 3.76
+
+(define (average . streams)
+  (/ (apply + streams)
+     (length streams)))
+
+(define (smooth s)
+  (stream-map average
+              s
+              (stream-cdr s)))
+
+(define zero-crossings
+  (let ((avged-data (smooth sense-data)))
+    (stream-map sign-change-detector
+                (stream-cdr avged-data)
+                avged-data)))
+
+;;; Tests
+
+(print 10 (smooth integers))
