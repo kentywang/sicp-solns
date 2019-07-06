@@ -150,8 +150,10 @@
     (stream-map (lambda (x)
                   (list (stream-car s) x))
                 (stream-cdr t))
-    (pairs (stream-cdr s) (stream-cdr t))
-    weighing-func)))
+    (weighted-pairs (stream-cdr s) ; Edit: Changed this to weighted-pairs
+                    (stream-cdr t) ; from pairs, since need recursion to
+                    weighing-func) ; order the 3rd part. (Otherwise, the
+    weighing-func)))               ; inputs to merge-weighted will be off)
 
 ;; 1.
 (define pairs-by-sum
@@ -159,26 +161,55 @@
 
 ;; 2.
 (define pairs-by-hamming
-  (let ((not-hamming?
-         (lambda (element)
-           (not (or (zero? (remainder element 2))
-                    (zero? (remainder element 3))
-                    (zero? (remainder element 5)))))))
-    (weighted-pairs (stream-filter not-hamming? integers)
-                    (stream-filter not-hamming? integers)
+  (let ((non-hamming-ints
+          (stream-filter (lambda (element)
+                           (not (or (zero? (remainder element 2))
+                                    (zero? (remainder element 3))
+                                    (zero? (remainder element 5)))))
+                         integers)))
+    (weighted-pairs non-hamming-ints
+                    non-hamming-ints
                     (lambda (a b) (+ (* 2 a)
                                      (* 3 b)
                                      (* 5 a b))))))
 
 ;; Helper for testing
 (define (print n s)
-  (if (> n 0)
-      (begin (display (stream-car s))
-             (newline)
-             (print (- n 1) (stream-cdr s)))))
+  (define (recur s c)
+    (if (< c n)
+        (begin
+          (display c)
+          (display "  ")
+          (display (stream-car s))
+          (newline)
+          (recur (stream-cdr s) (+ c 1)))))
+  (recur s 0))
 
 ;;; Tests
 
 (print 20 pairs-by-sum)
 (newline)
 (print 20 pairs-by-hamming)
+
+;;; 3.71
+(define cubic-sum
+  (lambda (a b) (+ (expt a 3)
+                   (expt b 3))))
+
+(define cubic-sum-pairs
+  (weighted-pairs integers integers cubic-sum))
+
+(define ramanujan
+  (let ((s cubic-sum-pairs))
+    (define (recur t)
+      (let ((cs (apply cubic-sum (stream-car t)))
+            (next (stream-car (stream-cdr t))))
+        (if (= cs (apply cubic-sum next))
+            (cons-stream cs
+                         (recur (stream-cdr (stream-cdr t))))
+            (recur (stream-cdr t)))))
+    (recur s)))
+
+;;; Tests
+(newline)
+(print 5 ramanujan)
