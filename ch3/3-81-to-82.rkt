@@ -39,13 +39,33 @@
 
 (define (rand-update x) (+ 1 x)) ; Super random.
 
-;; (define (make-random-numbers n)
-;;   (define recur
-;;     (stream-cons n (stream-map rand-update
-;;                                recur)))
-;;   recur)
+(define random-numbers
+  (stream-cons random-init
+               (stream-map rand-update
+                           random-numbers)))
 
-;;; Main
+(define (monte-carlo experiment-stream
+                     passed
+                     failed)
+  (define (next passed failed)
+    (stream-cons
+     (/ passed (+ passed failed))
+     (monte-carlo
+      (stream-rest experiment-stream)
+      passed
+      failed)))
+  (if (stream-first experiment-stream)
+      (next (+ passed 1) failed)
+      (next passed (+ failed 1))))
+
+(define (random-in-range low high)
+  (let ((range (- high low)))
+    (+ low (* (random) range))))
+
+(define (area a b m n)
+  (* (- b a) (- n m))) ; Assumes b > a, n > m.
+
+;;; 3.81
 
 (define (rand req-stream)
   (define recur
@@ -76,3 +96,30 @@
                       reqs))
 
 (print 20 (rand reqs))
+
+;;; 3.82
+
+(define (estimate-integral p x1 x2 y1 y2)
+  (define (test-stream)
+    (stream-cons
+     (p (random-in-range x1 x2)
+        (random-in-range y1 y2))
+     (test-stream)))
+  (define test-area (area x1 x2 y1 y2))
+  (stream-map
+   (lambda (pass-ratio) (* (exact->inexact pass-ratio)
+                           test-area))
+   (monte-carlo (test-stream) 0 0)))
+
+;;; Tests
+
+(define unit-circle-a ; Also is pi.
+  (estimate-integral
+   (lambda (x y)
+     (>= 1 (+ (expt x 2) (expt y 2))))
+   -1
+   1
+   -1
+   1))
+
+(print 100 unit-circle-a)
