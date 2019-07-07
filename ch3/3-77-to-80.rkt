@@ -88,3 +88,28 @@
 
 (stream-ref
  (solve-2nd-general + 0.001 5 6) 10)
+
+;;; 3.80
+
+(define (RLC R L C dt)
+  (lambda (v0 i0)
+    (define v (integral (delay (scale-stream i (/ -1 C)))
+                        v0
+                        dt))
+    (define i (integral (delay
+                          (add-streams
+                           (scale-stream i (- (/ R L)))
+                           (scale-stream v (/ 1 L))))
+                        i0
+                        dt))
+    (cons v i)))
+
+;;; Tests
+
+(define r ((RLC 1 1 0.2 0.1) 10 0))
+(define v (car r))
+(define i (cdr r))
+
+(print 10 v)
+(newline)
+(print 10 i)
