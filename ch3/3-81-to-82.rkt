@@ -123,3 +123,7 @@
    1))
 
 (print 100 unit-circle-a)
+
+;; Edit: Could be made more streamy. For instance, we can have a stream of
+;; random pairs to stream-map over with p. Also, could have just scaled the
+;; monte-carlo stream by the area.
