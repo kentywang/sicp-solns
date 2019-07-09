@@ -1,3 +1,6 @@
+;; let* is just shorthand for nested lets. It's sufficient to convert it to
+;; a nested let expression and just eval that.
+
 (define (eval exp env)
   (cond ((self-evaluating? exp)
          exp)
