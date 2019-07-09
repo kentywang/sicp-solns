@@ -54,3 +54,5 @@
                   (car exps)
                   (recur (cdr var) (cdr exps)))))
   (recur (let-vars exp) (let-exps exp)))
+
+;; Edit: Could use fold.
