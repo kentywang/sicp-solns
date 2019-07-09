@@ -1,4 +1,4 @@
-;;;4.2
+;;; 4.2
 
 ;; 1. As the assignment clause is run first, its condition of pair? is
 ;; fulfilled by anything but a symbol, string, or number, so (define x 2)
