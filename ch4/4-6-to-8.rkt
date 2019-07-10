@@ -82,6 +82,11 @@
 
 ;;; 4.8
 
+;; Initially I thought we needed it to be define, but since the var binding
+;; only exists within the let body, it's not.
+
+;; Try 1:
+
 ;; (let f ((a 0) (b 1)) (+ 1 (f a b))) is just:
 
 ;; (let ((f (lambda (a b)
@@ -90,14 +95,26 @@
 
 ;; Which is just:
 
-;; ((lambda (f)
-;;    (lambda (a b)
-;;      (+1 (f a b))))
-;;  0
-;;  1)
+;; ((lambda (f) (f 0 1))
+;;  (lambda (a b)
+;;    (+ 1 (f a b))))
 
-;; Initially I thought we needed it to be define, but since the var binding
-;; only exists within the let body, it's not.
+;; Edit: This doesn't work since the reference to the procedure doesn't
+;; exist in the env that the lambda expression for the procedure was
+;; evaluated it.
+
+;; Something like this works, but it involves tampering with the contents
+;; of the body, so it's not a real solution:
+
+;; ((lambda (f) (f 0 1 f))
+;;  (lambda (a b f)
+;;    (+ 1 (f a b f))))
+
+;; We want something like this:
+
+;; ((lambda ()
+;;   (define (f a b) (+1 (f a b)))
+;;   (f 0 1)))
 
 ;;; More robust selectors
 
@@ -126,13 +143,15 @@
       false)) ; For implementation language to use, so not quoted.
 
 (define (let->combination exp)
-  (let ((name (let-name exp))
-        (vars (let-vars exp))
-        (exps (let-exps exp))
-        (body (let-body exp)))
+  (let* ((name (let-name exp))
+         (vars (let-vars exp))
+         (exps (let-exps exp))
+         (body (let-body exp))
+         (let-bindings (make-lambda vars body)))
     (if name
-        (make-let (list name)
-                  (make-lambda vars body)
-                  (cons name exps))
-        (cons (make-lambda vars body)
-              exps)))
+        (list
+         (make-lambda ; Lambda expression scopes the function binding.
+          '()
+          (list (list 'define name let-bindings)
+                (cons name exps))))
+        (cons let-bindings exps))))
