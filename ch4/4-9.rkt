@@ -34,3 +34,6 @@
     (begin
       (eval (while-body exp) env)
       (eval exp env)))
+
+;; So it seems like while can't be implemented purely as a syntax
+;; transform. We need to add special handling for it within the evaluator.
