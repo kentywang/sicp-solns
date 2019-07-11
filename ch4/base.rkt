@@ -1,5 +1,7 @@
-#lang racket
-(provide (all-defined-out))
+#lang sicp
+;; #lang racket
+;; (require rnrs/mutable-pairs-6)
+;; (provide (all-defined-out))
 
 (define apply-in-underlying-scheme apply)
 
@@ -30,17 +32,21 @@
         ((cond? exp)
          (eval (cond->if exp) env))
         ((application? exp)
-         (apply (eval (operator exp) env)
-                (list-of-values
-                 (operands exp)
-                 env)))
+         ;; Racket compiler complains about calling
+         ;; (define apply-in-underlying-scheme apply)
+         ;; since apply is defined below for the metacircular evaluator, so
+         ;; I'm renaming the interpreted version of apply.
+         (apply-in-interpreted-scheme (eval (operator exp) env)
+                                      (list-of-values
+                                       (operands exp)
+                                       env)))
         (else
          (error "Unknown expression
                  type: EVAL" exp))))
 
 ;;; Apply
 
-(define (apply procedure arguments)
+(define (apply-in-interpreted-scheme procedure arguments)
   (cond ((primitive-procedure? procedure)
          (apply-primitive-procedure
           procedure
@@ -311,6 +317,31 @@
 
 ;;; Binding the primitives
 
+(define (primitive-procedure? proc)
+  (tagged-list? proc 'primitive))
+
+(define (primitive-implementation proc)
+  (cadr proc))
+
+(define primitive-procedures
+  (list (list 'car car)
+        (list 'cdr cdr)
+        (list 'cons cons)
+        (list 'null? null?)
+        (list '+ +))) ; All other primitives go here.
+
+(define (primitive-procedure-names)
+  (map car primitive-procedures))
+
+(define (primitive-procedure-objects)
+  (map (lambda (proc)
+         (list 'primitive (cadr proc)))
+       primitive-procedures))
+
+(define (apply-primitive-procedure proc args)
+  (apply-in-underlying-scheme
+   (primitive-implementation proc) args))
+
 (define (setup-environment)
   (let ((initial-env
          (extend-environment
@@ -324,26 +355,35 @@
 (define the-global-environment
   (setup-environment))
 
-(define (primitive-procedure? proc)
-  (tagged-list? proc 'primitive))
+;;; REPL
 
-(define (primitive-implementation proc)
-  (cadr proc))
+(define input-prompt  ";;; M-Eval input:")
+(define output-prompt ";;; M-Eval value:")
 
-(define primitive-procedures
-  (list (list 'car car)
-        (list 'cdr cdr)
-        (list 'cons cons)
-        (list 'null? null?))) ; All other primitives go here.
+(define (driver-loop)
+  (prompt-for-input input-prompt)
+  (let ((input (read)))
+    (let ((output
+           (eval input
+                 the-global-environment)))
+      (announce-output output-prompt)
+      (user-print output)))
+  (driver-loop))
 
-(define (primitive-procedure-names)
-  (map car primitive-procedures))
+(define (prompt-for-input string)
+  (newline) (newline)
+  (display string) (newline))
 
-(define (primitive-procedure-objects)
-  (map (lambda (proc)
-         (list 'primitive (cadr proc)))
-       primitive-procedures))
+(define (announce-output string)
+  (newline) (display string) (newline))
 
-(define (apply-primitive-procedure proc args)
-  (apply-in-underlying-scheme
-   (primitive-implementation proc) args))
+(define (user-print object)
+  (if (compound-procedure? object)
+      (display
+       (list 'compound-procedure
+             (procedure-parameters object)
+             (procedure-body object)
+             '<procedure-env>))
+      (display object)))
+
+(driver-loop)
