@@ -1,0 +1,18 @@
+4.14
+The procedure passed to the underlying map, if not a primitive procedure, would be some evaluator-defined representation of a procedure, such as '(procedure <parameters> <body> <env>). Even if it was a primitive, it would still have an abstraction layer over it like '(primitive <procedure>), making it nonfunctional for the underlying map to understand. That layer is removed if the primitive proc is the operator, but in this case it's just an argument, so it is never peeled off.
+
+Notice also that primitive procedures in the implemented language needn't be stored with an env nor a body.
+
+The rest argument to map would be broken down into a nested cons that was built behind-the-scenes in the implementor language and so is in its implementor-specified representation, meaning it would not cause any issues for the underlying map to handle.
+
+Aside, but we're still missing a lot of primitive procedures (the single quote, list, etc.) and global bindings for things like nil.
+
+(define (map proc items)
+  (if (null? items)
+      '()
+      (cons (proc (car items))
+            (map proc (cdr items)))))
+
+4.15
+If we try and test if p(a) returns, if it does then halt? is true, but if it doesn't, we can never conclusively return false.
+The given procedure violates the intended behavior of halts? with either outcome. If it's asserted that the procedure halts, then it is made to run forever. If it's asserted to run forever, then it is made to halt. This demonstrates that a program can't reliably discern if it is in an infinite loop.
