@@ -80,16 +80,33 @@
 ;; Unbinds first binding found within full environment. This is my approach
 ;; because frames are a pretty abstract concept that users might not care
 ;; to understand. They just want their variable unbound.
+
+;; Initial approach was to reuse the find-binding procedure defined for
+;; 4.12. But it's not the best here because we need to reference more than
+;; the tail of a list in order to delete (or rather, derefernce a list
+;; completely).
+
 (define (eval-unbound exp env)
-  ;; Borrowing a proc from 4.12.
-  (let (binding (find-binding (unbound-var exp) env))
-    (if binding
-        (begin (shift! (car binding))
-               (shift! (cdr binding))
-               'ok)
-        (error
-         "No variable found in environment to unbind"
-         (unbound-var exp)))))
+  (define (env-loop var env)
+    (define (scan vars vals)
+      (cond ((null? vars)
+             (env-loop
+              var
+              (enclosing-environment env)))
+            ((eq? var (car vars))
+             (if (= 1 (length (frame-variables (first-frame env))))
+                 ;; Only one element, so deref list completely.
+                 (set-car! env (make-frame '() '()))
+                 (begin (shift! vars)    ; Would be more performant to keep
+                        (shift! vals)))) ; ref of preceding element to edit
+            (else (scan (cdr vars)
+                        (cdr vals)))))
+    (if (eq? env the-empty-environment)
+        (error "Nonexistent variable: MAKE-UNBOUND!" var)
+        (let ((frame (first-frame env)))
+          (scan (frame-variables frame)
+                (frame-values frame)))))
+  (env-loop (unbound-var exp) env))
 
 (define (unbound-var exp) (cdr exp))
 
