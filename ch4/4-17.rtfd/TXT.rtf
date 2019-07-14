@@ -10,4 +10,4 @@
 \cf0 \
 Extra frame is due to let creating an immediately invoked lambda expression that \'93hard scopes\'94 the defined variables within the frame, so that querying for them won\'92t leave the first frame. In a correct program, the internal definitions are all at the beginning and don\'92t reference one another during definition evaluation (although they can during application), so there is never an instance where a variable is evaluated while it is still unassigned, making its behavior identical in both sequential evaluation and a pseudo-simultaneous setup as given by the book here via a let expression.\
 \
-To implement the simultaneous scope rule without constructing an extra frame, we could just scan through the body to find the defines like before, but just use that information to add defines to *unassigned* within the same frame and then set them to the defined values given.g}
+To implement the simultaneous scope rule without constructing an extra frame, we could just scan through the body to find the defines like before, but just use that information to add defines to *unassigned* within the same frame and then set them to the defined values given.}
