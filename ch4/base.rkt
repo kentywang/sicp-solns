@@ -152,14 +152,42 @@
 (define (let? exp)
   (tagged-list? exp 'let))
 
-(define (let-vars exp) (map car (cadr exp)))
-(define (let-exps exp) (map cadr (cadr exp)))
-(define (let-body exp) (cddr exp))
+(define (let-vars exp)
+  (map car
+       ((if (symbol? (cadr exp))
+            caddr ; Named let, so 3rd element is the bindings.
+            cadr) ; Normal let, so 2nd element is the bindings.
+        exp)))
+(define (let-exps exp)
+  (map cadr
+       ((if (symbol? (cadr exp))
+            caddr
+            cadr)
+        exp)))
+(define (let-body exp)
+  ((if (symbol? (cadr exp))
+       cdddr ; Named let, so 4th element on are the body.
+       cddr) ; Normal let, so 3rd element on are the body.
+   exp))
+
+(define (let-name exp)
+  (if (symbol? (cadr exp))
+      (cadr exp)
+      false)) ; For implementation language to use, so not quoted.
 
 (define (let->combination exp)
-  (cons (make-lambda (let-vars exp)
-                     (let-body exp))
-        (let-exps exp)))
+  (let* ((name (let-name exp))
+         (vars (let-vars exp))
+         (exps (let-exps exp))
+         (body (let-body exp))
+         (let-bindings (make-lambda vars body)))
+    (if name
+        (list
+         (make-lambda ; Lambda expression scopes the function binding.
+          '()
+          (list (list 'define name let-bindings)
+                (cons name exps))))
+        (cons let-bindings exps))))
 
 ;;; LET*
 
@@ -410,7 +438,8 @@
         (list 'cdr cdr)
         (list 'cons cons)
         (list 'null? null?)
-        (list '+ +))) ; All other primitives go here.
+        (list '+ +)
+        (list '= =))) ; All other primitives go here.
 
 (define (primitive-procedure-names)
   (map car primitive-procedures))
