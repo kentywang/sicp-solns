@@ -240,6 +240,13 @@
   (car clause))
 (define (cond-actions clause)
   (cdr clause))
+
+;;; New selectors
+(define (cond-special-clause? clause)
+  (eq? (cadr clause) '=>))
+(define (cond-special-proc clause)
+  (caddr clause))
+
 (define (cond->if exp)
   (expand-clauses (cond-clauses exp)))
 (define (expand-clauses clauses)
@@ -255,10 +262,13 @@
                         last: COND->IF"
                        clauses))
             (make-if (cond-predicate first)
-                     (sequence->exp
-                      (cond-actions first))
-                     (expand-clauses
-                      rest))))))
+                     ;; For (⟨test⟩ => ⟨recipient⟩)
+                     (if (cond-special-clause? first)
+                         (list (cond-special-proc first)
+                               (cond-predicate first))
+                         (sequence->exp
+                          (cond-actions first)))
+                     (expand-clauses rest))))))
 
 ;;; Testing of predicates
 

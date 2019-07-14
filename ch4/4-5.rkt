@@ -12,7 +12,7 @@
 
 ;;; New selectors
 (define (cond-special-clause? clause)
-  (eq? (cdr clause) '=>))
+  (eq? (cadr clause) '=>))
 (define (cond-special-proc clause)
   (caddr clause))
 
@@ -36,7 +36,7 @@
                          ;; We could cache the predicate, but book hasn't
                          ;; introduced make-let yet.
                          (list (cond-special-proc first)
-                               (cons-predicate first))
+                               (cond-predicate first))
                          ;; Careful, cond-actions returns => for
                          ;; the special clause, which is wrong.
                          (sequence->exp
