@@ -31,6 +31,10 @@
           env))
         ((cond? exp)
          (eval (cond->if exp) env))
+        ((and? exp)                       ; AND
+         (eval-and exp env))
+        ((or? exp)                        ; OR
+         (eval (or->if exp) env))
         ((application? exp)
          ;; Racket compiler complains about calling
          ;; (define apply-in-underlying-scheme apply)
@@ -107,6 +111,37 @@
     (eval (definition-value exp) env)
     env)
   'ok)
+
+;;; I implement and as a special form.
+
+(define (and? exp) (tagged-list? exp 'and))
+
+(define (eval-and exp env)
+  (define (and-clauses exp) (cdr exp))
+  (define (and-first exps) (car exps))
+  (define (and-rest exps) (cdr exps))
+  (define (recur exps)
+    (if (null? exps)
+        'true
+        ;; Relying on implementation language to eval the and LTR.
+        (and (true? (eval (and-first exps) env))
+             (recur (and-rest exps)))))
+  (recur (and-clauses exp)))
+
+;;; I implement or as a derived expression.
+
+(define (or? exp) (tagged-list? exp 'or))
+(define (or-clauses exp) (cdr exp))
+
+(define (or->if exp)
+  (expand-or-clauses (or-clauses exp)))
+
+(define (expand-or-clauses clauses)
+  (if (null? clauses)
+      'false
+      (make-if (car clauses)
+               'true
+               (expand-or-clauses (cdr clauses)))))
 
 ;;; Representing expressions
 

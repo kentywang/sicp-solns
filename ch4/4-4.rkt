@@ -38,18 +38,21 @@
          (error "Unknown expression
                  type: EVAL" exp))))
 
-;;; I implement and as a special form.
+;;;; I implement and as a special form.
 
 (define (and? exp) (tagged-list? exp 'and))
-(define (and-first exp) (cadr exp))
-(define (and-rest exp) (cddr exp))
 
 (define (eval-and exp env)
-  (if (null? exp)
-      'true
-      ;; Relying on implementation language to eval the and LTR.
-      (and (true? (eval (and-first exp) env))
-           (eval-and (and-rest exp) env))))
+  (define (and-clauses exp) (cdr exp))
+  (define (and-first exps) (car exps))
+  (define (and-rest exps) (cdr exps))
+  (define (recur exps)
+    (if (null? exps)
+        'true
+        ;; Relying on implementation language to eval the and LTR.
+        (and (true? (eval (and-first exps) env))
+             (recur (and-rest exps)))))
+  (recur (and-clauses exp)))
 
 ;;; I implement or as a derived expression.
 
@@ -64,4 +67,4 @@
       'false
       (make-if (car clauses)
                'true
-               (or->if (cdr clauses)))))
+               (expand-or-clauses (cdr clauses)))))
