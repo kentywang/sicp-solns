@@ -31,10 +31,14 @@
           env))
         ((cond? exp)
          (eval (cond->if exp) env))
-        ((and? exp)                       ; AND
+        ((and? exp)                          ; AND
          (eval-and exp env))
-        ((or? exp)                        ; OR
+        ((or? exp)                           ; OR
          (eval (or->if exp) env))
+        ((let? exp)                          ; LET
+         (eval (let->combination exp) env))
+        ((let*? exp)                         ; LET*
+         (eval (let*->nested-lets exp) env))
         ((application? exp)
          ;; Racket compiler complains about calling
          ;; (define apply-in-underlying-scheme apply)
@@ -112,7 +116,7 @@
     env)
   'ok)
 
-;;; I implement and as a special form.
+;;; AND
 
 (define (and? exp) (tagged-list? exp 'and))
 
@@ -128,7 +132,7 @@
              (recur (and-rest exps)))))
   (recur (and-clauses exp)))
 
-;;; I implement or as a derived expression.
+;;; OR
 
 (define (or? exp) (tagged-list? exp 'or))
 (define (or-clauses exp) (cdr exp))
@@ -142,6 +146,39 @@
       (make-if (car clauses)
                'true
                (expand-or-clauses (cdr clauses)))))
+
+;;; LET
+
+(define (let? exp)
+  (tagged-list? exp 'let))
+
+(define (let-vars exp) (map car (cadr exp)))
+(define (let-exps exp) (map cadr (cadr exp)))
+(define (let-body exp) (cddr exp))
+
+(define (let->combination exp)
+  (cons (make-lambda (let-vars exp)
+                     (let-body exp))
+        (let-exps exp)))
+
+;;; LET*
+
+(define (let*? exp)
+  (tagged-list? exp 'let*))
+
+(define (make-let vars exps body)
+  (cons 'let
+        (cons (map list vars exps)
+              body)))
+
+(define (let*->nested-lets exp)
+  (define (recur vars exps)
+    (if (null? vars)
+        (sequence->exp (let-body exp))
+        (make-let (list (car vars))
+                  (list (car exps))
+                  (list (recur (cdr vars) (cdr exps))))))
+  (recur (let-vars exp) (let-exps exp)))
 
 ;;; Representing expressions
 

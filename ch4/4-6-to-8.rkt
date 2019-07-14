@@ -72,10 +72,10 @@
 (define (let*->nested-lets exp)
   (define (recur vars exps)
     (if (null? vars)
-        (let-body exp)
-        (make-let (car var)
-                  (car exps)
-                  (recur (cdr var) (cdr exps)))))
+        (sequence->exp (let-body exp))
+        (make-let (list (car vars))
+                  (list (car exps))
+                  (list (recur (cdr vars) (cdr exps))))))
   (recur (let-vars exp) (let-exps exp)))
 
 ;; Edit: Could use fold.
