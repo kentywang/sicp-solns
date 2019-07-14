@@ -44,6 +44,13 @@
          (eval (let->combination exp) env))
         ((let*? exp)                         ; LET*
          (eval (let*->nested-lets exp) env))
+        ((letrec? exp)                       ; LETREC
+         (eval (scan-out-defines
+                (add-defs-to-body
+                 (let-vars exp)
+                 (let-exps exp)
+                 (let-body exp)))
+               env))
         ((while? exp)                        ; WHILE
          (eval-while exp env))
         ((application? exp)
@@ -219,6 +226,17 @@
                   (list (car exps))
                   (list (recur (cdr vars) (cdr exps))))))
   (recur (let-vars exp) (let-exps exp)))
+
+;;; LETREC
+
+(define (letrec? exp)
+  (tagged-list? exp 'letrec))
+
+(define (add-defs-to-body vars exps body)
+  (if (null? vars)
+      body
+      (cons (list 'define (car vars) (car exps))
+            (add-defs-to-body (cdr vars) (cdr exps) body))))
 
 ;;; WHILE
 
@@ -412,7 +430,10 @@
 ;;; Representing procedures
 
 (define (make-procedure parameters body env)
-  (list 'procedure parameters (scan-out-defines body) env))
+  ;; (list (scan-out-defines body)) because new body is supposed to be a
+  ;; sequence of expressions.
+  ;; Could really use an abstraction layer to deal with this.
+  (list 'procedure parameters (list (scan-out-defines body)) env))
 (define (compound-procedure? p)
   (tagged-list? p 'procedure))
 (define (procedure-parameters p) (cadr p))
@@ -496,11 +517,9 @@
                   defs
                   (cons (car body) rest)))))
   (define (rebuild defs rest)
-    ;; List because body is supposed to be a sequence of expressions.
-    ;; Could really use an abstraction layer to deal with this.
-    (list (make-let (map definition-variable defs)
-                    (map (lambda (_) ''*unassigned*) defs)
-                    (append (make-sets defs) rest))))
+    (make-let (map definition-variable defs)
+              (map (lambda (_) ''*unassigned*) defs)
+              (append (make-sets defs) rest)))
   (define (make-sets defs)
     (if (null? defs)
         '()

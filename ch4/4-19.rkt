@@ -11,3 +11,6 @@
 
 ;; Here, a and b are mutually dependent values (and not procedures). This is a
 ;; paradox, so Alyssa's approach is the most sane because it errors out.
+
+;; Edit: Excluding these cases, it is possible to sort dependencies like this.
+;; It's called topological sorting.
