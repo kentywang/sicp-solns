@@ -392,52 +392,42 @@
                  vars
                  vals))))
 
+;; Returns pair of list with variable at front and list with value at
+;; front, or false
+(define (find-binding var env)
+  (define (scan vars vals)
+    (cond ((null? vars)
+           (find-binding var (enclosing-environment env)))
+          ((eq? var (car vars))
+           (cons vars vals))
+          (else (scan (cdr vars)
+                      (cdr vals)))))
+  (if (eq? env the-empty-environment)
+      false
+      (let ((frame (first-frame env)))
+        (scan (frame-variables frame)
+              (frame-values frame)))))
+
 (define (lookup-variable-value var env)
-  (define (env-loop env)
-    (define (scan vars vals)
-      (cond ((null? vars)
-             (env-loop
-              (enclosing-environment env)))
-            ((eq? var (car vars))
-             (car vals))
-            (else (scan (cdr vars)
-                        (cdr vals)))))
-    (if (eq? env the-empty-environment)
-        (error "Unbound variable" var)
-        (let ((frame (first-frame env)))
-          (scan (frame-variables frame)
-                (frame-values frame)))))
-  (env-loop env))
+  (let ((binding (find-binding var env)))
+    (if binding
+        (cadr binding)
+        (error "Unbound variable" var))))
 
 (define (set-variable-value! var val env)
-  (define (env-loop env)
-    (define (scan vars vals)
-      (cond ((null? vars)
-             (env-loop
-              (enclosing-environment env)))
-            ((eq? var (car vars))
-             (set-car! vals val))
-            (else (scan (cdr vars)
-                        (cdr vals)))))
-    (if (eq? env the-empty-environment)
-        (error "Unbound variable: SET!" var)
-        (let ((frame (first-frame env)))
-          (scan (frame-variables frame)
-                (frame-values frame)))))
-  (env-loop env))
+  (let ((binding (find-binding var env)))
+    (if binding
+        (set-car! (cdr binding) val)
+        (error "Unbound variable: SET!" var))))
 
 (define (define-variable! var val env)
-  (let ((frame (first-frame env)))
-    (define (scan vars vals)
-      (cond ((null? vars)
-             (add-binding-to-frame!
-              var val frame))
-            ((eq? var (car vars))
-             (set-car! vals val))
-            (else (scan (cdr vars)
-                        (cdr vals)))))
-    (scan (frame-variables frame)
-          (frame-values frame))))
+  (let* ((frame (first-frame env))
+         (binding (find-binding var
+                                ;; Only pass 1st frame.
+                                (list frame))))
+    (if binding
+        (set-car! (cdr binding) val)
+        (add-binding-to-frame! var val frame))))
 
 ;;; Binding the primitives
 

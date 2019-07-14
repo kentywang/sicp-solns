@@ -35,7 +35,7 @@
                                 (list frame))))
     (if binding
         (set-car! (cdr binding) val)
-        (assign-binding-to-frame! var val frame))))
+        (add-binding-to-frame! var val frame))))
 
 ;;; 4.13
 
