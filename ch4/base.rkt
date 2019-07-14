@@ -18,6 +18,8 @@
          (eval-assignment exp env))
         ((definition? exp)
          (eval-definition exp env))
+        ((make-unbound? exp)                 ; MAKE-UNBOUND!
+         (eval-unbound exp env))
         ((if? exp)
          (eval-if exp env))
         ((lambda? exp)
@@ -221,6 +223,48 @@
   (cond ((true? (eval (while-predicate exp) env)) ; Alternatively, could
          (eval-sequence (while-body exp) env)     ; use while.
          (eval-while exp env))))
+
+;;; MAKE-UNBOUND!
+
+(define (make-unbound? exp)
+  (tagged-list? exp 'make-unbound!))
+
+(define (eval-unbound exp env)
+  (define (env-loop var env)
+    (define (scan vars vals)
+      (cond ((null? vars)
+             (env-loop
+              var
+              (enclosing-environment env)))
+            ((eq? var (car vars))
+             (if (= 1 (length (frame-variables (first-frame env))))
+                 ;; Only one element, so deref list completely.
+                 (set-car! env (make-frame '() '()))
+                 (begin (shift! vars)    ; Would be more performant to keep
+                        (shift! vals)))) ; ref of preceding element to edit
+            (else (scan (cdr vars)
+                        (cdr vals)))))
+    (if (eq? env the-empty-environment)
+        (error "Nonexistent variable: MAKE-UNBOUND!" var)
+        (let ((frame (first-frame env)))
+          (scan (frame-variables frame)
+                (frame-values frame)))))
+  (env-loop (unbound-var exp) env))
+
+(define (unbound-var exp) (cadr exp))
+
+;; Helper
+(define (shift! items)
+  "Removes car of list by shifting things up."
+  (cond ((null? items)
+         (error "Nothing to shift: SHIFT!"))
+        ;; Missing handling for if item is just 1 element!
+        ((null? (cddr items))
+         (set-car! items (cdr items))
+         (set-cdr! items '()))
+        (else
+         (set-car! items (cdr items))
+         (shift! (cdr items)))))
 
 ;;; Representing expressions
 

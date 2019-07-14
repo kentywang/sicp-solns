@@ -50,7 +50,7 @@
          (eval-assignment exp env))
         ((definition? exp)
          (eval-definition exp env))
-        ((unbound? exp)                    ; New
+        ((make-unbound? exp)                    ; New
          (eval-unbound exp env))
         ((if? exp)
          (eval-if exp env))
@@ -108,7 +108,7 @@
                 (frame-values frame)))))
   (env-loop (unbound-var exp) env))
 
-(define (unbound-var exp) (cdr exp))
+(define (unbound-var exp) (cadr exp))
 
 ;; Helper
 (define (shift! items)
