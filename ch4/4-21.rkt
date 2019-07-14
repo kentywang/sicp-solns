@@ -13,7 +13,7 @@
   ((lambda (f) (f f n 0 1))
    (lambda (g o p q)
      (if (= o 0)
-         q
+         p ; By definition, first fib number is 0.
          (g g (- o 1) q (+ p q))))))
          
 ;; 2. Interesting solution! We need to maintain the same function
@@ -32,3 +32,5 @@
      (if (= n 0) 
          false 
          (ev? ev? od? (- n 1))))))
+
+;; Edit: Y-combinator?
