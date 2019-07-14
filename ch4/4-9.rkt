@@ -30,10 +30,26 @@
 ;; http://gurugio.blogspot.com/2011/02/sicp-exercise-ex49.html
 ;; Strategy is to establish the loop in the implementor language, not
 ;; within the implemented language.
-(if (true? (eval (while-predicate exp) env))
-    (begin
-      (eval (while-body exp) env)
-      (eval exp env)))
+(define (eval-while exp env)
+  (define while-predicate (lambda (exp) (cadr exp)))
+  (define while-body (lambda (exp) (cddr exp)))
+  (cond ((true? (eval (while-predicate exp) env)) ; Alternatively, could
+         (eval-sequence (while-body exp) env)     ; use while.
+         (eval-while exp env))))
 
 ;; So it seems like while can't be implemented purely as a syntax
 ;; transform. We need to add special handling for it within the evaluator.
+
+;;; Test
+
+(define (test)
+  (define count 0)
+  (define (increment y)
+    (if (= count 5)
+        false
+        (set! count (+ count y))))
+  increment)
+
+(define inkr (test))
+
+(while (inkr 1) (+ 2 3))

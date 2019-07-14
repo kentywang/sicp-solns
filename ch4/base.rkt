@@ -39,6 +39,8 @@
          (eval (let->combination exp) env))
         ((let*? exp)                         ; LET*
          (eval (let*->nested-lets exp) env))
+        ((while? exp)                        ; WHILE
+         (eval-while exp env))
         ((application? exp)
          ;; Racket compiler complains about calling
          ;; (define apply-in-underlying-scheme apply)
@@ -207,6 +209,18 @@
                   (list (car exps))
                   (list (recur (cdr vars) (cdr exps))))))
   (recur (let-vars exp) (let-exps exp)))
+
+;;; WHILE
+
+(define (while? exp)
+  (tagged-list? exp 'while))
+
+(define (eval-while exp env)
+  (define while-predicate (lambda (exp) (cadr exp)))
+  (define while-body (lambda (exp) (cddr exp)))
+  (cond ((true? (eval (while-predicate exp) env)) ; Alternatively, could
+         (eval-sequence (while-body exp) env)     ; use while.
+         (eval-while exp env))))
 
 ;;; Representing expressions
 
