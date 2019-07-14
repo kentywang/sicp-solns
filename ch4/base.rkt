@@ -8,6 +8,9 @@
 ;;; Eval
 
 (define (eval exp env)
+  (display "eval: ")
+  (display exp)
+  (newline)
   (cond ((self-evaluating? exp)
          exp)
         ((variable? exp)
@@ -59,6 +62,9 @@
 ;;; Apply
 
 (define (apply-in-interpreted-scheme procedure arguments)
+  (display "apply: ")
+  (display arguments)
+  (newline)
   (cond ((primitive-procedure? procedure)
          (apply-primitive-procedure
           procedure
@@ -191,7 +197,9 @@
           '()
           (list (list 'define name let-bindings)
                 (cons name exps))))
-        (cons let-bindings exps))))
+        (if (null? vars)
+            (sequence->exp body)
+            (cons let-bindings exps)))))
 
 ;;; LET*
 
@@ -404,7 +412,7 @@
 ;;; Representing procedures
 
 (define (make-procedure parameters body env)
-  (list 'procedure parameters body env))
+  (list 'procedure parameters (scan-out-defines body) env))
 (define (compound-procedure? p)
   (tagged-list? p 'procedure))
 (define (procedure-parameters p) (cadr p))
@@ -455,7 +463,10 @@
 (define (lookup-variable-value var env)
   (let ((binding (find-binding var env)))
     (if binding
-        (cadr binding)
+        (if (eq? '*unassigned*
+                 (cadr binding))
+            (error "Unassigned variable" var)
+            (cadr binding))
         (error "Unbound variable" var))))
 
 (define (set-variable-value! var val env)
@@ -473,6 +484,32 @@
         (set-car! (cdr binding) val)
         (add-binding-to-frame! var val frame))))
 
+(define (scan-out-defines body)
+  (define (iter body defs rest)
+    (if (null? body)
+        (rebuild defs (reverse rest))
+        (if (definition? (car body))
+            (iter (cdr body)
+                  (cons (car body) defs)
+                  rest)
+            (iter (cdr body)
+                  defs
+                  (cons (car body) rest)))))
+  (define (rebuild defs rest)
+    ;; List because body is supposed to be a sequence of expressions.
+    ;; Could really use an abstraction layer to deal with this.
+    (list (make-let (map definition-variable defs)
+                    (map (lambda (_) ''*unassigned*) defs)
+                    (append (make-sets defs) rest))))
+  (define (make-sets defs)
+    (if (null? defs)
+        '()
+        (cons (list 'set!
+                    (definition-variable (car defs))
+                    (definition-value (car defs)))
+              (make-sets (cdr defs)))))
+  (iter body '() '()))
+
 ;;; Binding the primitives
 
 (define (primitive-procedure? proc)
@@ -487,6 +524,9 @@
         (list 'cons cons)
         (list 'null? null?)
         (list '+ +)
+        (list '- -)
+        (list '* *)
+        (list '/ /)
         (list '= =))) ; All other primitives go here.
 
 (define (primitive-procedure-names)
