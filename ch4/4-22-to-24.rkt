@@ -20,6 +20,9 @@
 ;; Alyssa's version iterates through each analyzed expression (via case
 ;; analysis) and applies each to the env.
 
+;; Her version will run the same loop on each new call, whereas the book version
+;; will have already run the loop at analysis time. This saves time.
+
 ;;; 4.24
 
 ;; Change driver loop.
@@ -48,36 +51,15 @@
       1
       (* (factorial (- n 1)) n)))
 
-;; Running (factorial 400):
-;; Original: 42009
-;; New: 3630
+;; Running (factorial 30000):
+;; Original: 7,228,183
+;; New: 6,656,237
 
-;; From this we can estimate each analysis + execution takes 42k/400 = 105 time
-;; units. And just execution[1] is 3630/400 = 9 time units. So analysis takes about
-;; 96/9 = 11 times longer than execution.
+;; From this we can estimate each analysis + execution takes 7.2m/30k = 241 time
+;; units. And just execution[1] is 6.7m/30k = 222 time units. So analysis takes
+;; (241-222)/241 = 7.9% of the time of execution.
 
 ;; [1] Not strictly true, since there is one analysis that occurs.
-
-;; Internal lambdas:
-(define (f x)
-  ((lambda (even? odd?)
-     (even? even? odd? x))
-   (lambda (ev? od? n)
-     (if (= n 0) 
-         true 
-         (od? ev? od? (- n 1))))
-   (lambda (ev? od? n)
-     (if (= n 0) 
-         false 
-         (ev? ev? od? (- n 1))))))
-
-;; (f 1000):
-;; Original: 52771
-;; New: 7101
-
-;; Analysis + execution: 52.77
-;; Execution[1]: 7.1
-;; Analysis:execution ratio: 6.43
 
 ;; As predicted recursive procedures benefit greatly from the analyze-once
 ;; approach.
