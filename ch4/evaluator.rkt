@@ -1,16 +1,13 @@
 #lang sicp
-;; #lang racket
-;; (require rnrs/mutable-pairs-6)
-;; (provide (all-defined-out))
 
 (define apply-in-underlying-scheme apply)
 
 ;;; Eval
 
 (define (eval exp env)
-  (display "eval: ")
-  (display exp)
-  (newline)
+;  (display "eval: ")
+;  (display exp)
+;  (newline)
   (cond ((self-evaluating? exp)
          exp)
         ((variable? exp)
@@ -69,9 +66,9 @@
 ;;; Apply
 
 (define (apply-in-interpreted-scheme procedure arguments)
-  (display "apply: ")
-  (display arguments)
-  (newline)
+;  (display "apply: ")
+;  (display arguments)
+;  (newline)
   (cond ((primitive-procedure? procedure)
          (apply-primitive-procedure
           procedure
@@ -580,11 +577,13 @@
 
 (define (driver-loop)
   (prompt-for-input input-prompt)
-  (let ((input (read)))
+  (let ((input (read))
+        (start (runtime)))
     (let ((output
            (eval input
                  the-global-environment)))
       (announce-output output-prompt)
+      (display-runtime (- (runtime) start))
       (user-print output)))
   (driver-loop))
 
@@ -603,5 +602,11 @@
              (procedure-body object)
              '<procedure-env>))
       (display object)))
+
+(define (display-runtime time)
+  (display "Runtime: ")
+  (newline)
+  (display time)
+  (newline))
 
 (driver-loop)
