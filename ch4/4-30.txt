@@ -1,0 +1,7 @@
+1. Evaling the for-each application will apply the procedure argument to the delayed (car items), where items if evaluated will return the thunk of the numbers list. This will mean applying the procedure display on x, which if evaled would be ('thunk '(car items) <global>), which would then be forced to the first element in the list if display was a primitive procedure. If it were a compound, the variable x is thunked and probably wouldn't work as intended. Anyways, this shows that we don't need to force the non-last elements in an eval-sequence.
+
+2. For the first, '(1 2) is returned with or without eval-sequence changes. For the second, with, e generates a thunk of (set! x ...) that doesn't get returned. The return is 1. With, the thunk is forced and so x is set to '(1 2), which is returned.
+
+3. First one doesn't change because since the assignment expression is directly available for evaluation, so adding a force step afterwards wouldn't do anything. In the second, the assignment is in a thunk that must be first looked up (using the eval step) from the variable binding and then forced in order to execute the assignment.
+
+4. I'm okay with the text approach since it minimizes side effects more and is more in line with the lazy evaluation theme for compound procedure argument passing. It reminds me of streams, which is much simpler to reason about when assignment is missing.
