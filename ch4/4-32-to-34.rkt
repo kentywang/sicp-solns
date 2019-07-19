@@ -46,6 +46,11 @@
 ;; (eval (list 'car (list 'quote object)) the-global-environment), but this
 ;; returned the thunk with expression of x or y.
 
+;; Update: Figured it out, thunked x and y are returned because (m x y) is
+;; lazy and thunks the variable arguments before they are looked up. So once
+;; we use the implemented car and cdr to get back the thunks, we need to lookup
+;; their values, which themselves will be thunks that will need to be unwrapped.
+
 ;; Would need to add list-underlying to global.
 ;; Need to use lambda in cons to defer list-underlying's eager evaluation.
 (define (cons x y) (list-underlying 'cons-return (lambda (m) (m x y))))
@@ -63,13 +68,19 @@
                         (procedure-body object)
                         '<procedure-env>))
                  ((cons-return? object)
-                  (let ((cons-env (cadddr (cadr object))))
+                  (let ((cons-env (cadddr (cadr object)))
+                        ;; Should be ('thunk 'x <cons-env>)
+                        (a (eval (list 'car (list 'quote object))
+                                 the-global-environment))
+                        ;; Should be ('thunk 'y <cons-env>)
+                        (b (eval (list 'cdr (list 'quote object))
+                                 the-global-environment)))
                     ;; Always thunks if cons is lazy.
                     ;; There's gotta be a more straightforward way to do this.
-                    (list (thunk-exp (lookup-variable-value 'x cons-env))
+                    (list (thunk-exp (lookup-variable-value (thunk-exp a) cons-env))
                           '&
                           ;; Has issues with for instance (cdr integers)
-                          (thunk-exp (lookup-variable-value 'y cons-env)))))
+                          (thunk-exp (lookup-variable-value (thunk-exp b) cons-env)))))
                  (else object))))
 
 (cons 1 (cons 2 3)) ; should print (1 & (cons 2 3))

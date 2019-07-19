@@ -678,13 +678,19 @@
                         (procedure-body object)
                         '<procedure-env>))
                  ((cons-return? object)
-                  (let ((cons-env (cadddr (cadr object))))
+                  (let ((cons-env (cadddr (cadr object)))
+                        ;; Should be ('thunk 'x <cons-env>)
+                        (a (eval (list 'car (list 'quote object))
+                                 the-global-environment))
+                        ;; Should be ('thunk 'y <cons-env>)
+                        (b (eval (list 'cdr (list 'quote object))
+                                 the-global-environment)))
                     ;; Always thunks if cons is lazy.
                     ;; There's gotta be a more straightforward way to do this.
-                    (list (thunk-exp (lookup-variable-value 'x cons-env))
+                    (list (thunk-exp (lookup-variable-value (thunk-exp a) cons-env))
                           '&
                           ;; Has issues with for instance (cdr integers)
-                          (thunk-exp (lookup-variable-value 'y cons-env)))))
+                          (thunk-exp (lookup-variable-value (thunk-exp b) cons-env)))))
                  (else object))))
 
 (define (display-runtime time)
