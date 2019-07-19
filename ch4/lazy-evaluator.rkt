@@ -13,7 +13,7 @@
         ((variable? exp)
          (lookup-variable-value exp env))
         ((quoted? exp)
-         (text-of-quotation exp))
+         (eval-quotation (text-of-quotation exp) env))           ; 4.33
         ((assignment? exp)
          (eval-assignment exp env))
         ((definition? exp)
@@ -346,6 +346,18 @@
 (define (text-of-quotation exp)
   (cadr exp))
 
+;; 4.33
+(define (eval-quotation exp env)
+  (cond ((pair? exp) (eval (make-cons exp) env))
+        (else exp)))
+
+;; 4.33
+(define (make-cons exp)
+  (if (null? exp)
+      nil
+      (list 'cons (car exp)
+            (make-cons (cdr exp)))))
+
 (define (tagged-list? exp tag)
   (if (pair? exp)
       (eq? (car exp) tag)
@@ -585,6 +597,9 @@
         (list '- -)
         (list '* *)
         (list '/ /)
+        (list 'eq? eq?) ; 4.33
+        (list 'list-underlying list) ; 4.34
+        (list 'list-ref-underlying list-ref) ; 4.34
         (list '= =))) ; All other primitives go here.
 
 (define (primitive-procedure-names)
@@ -614,8 +629,27 @@
 
 ;;; REPL
 
+;; 4.33
+;(eval-sequence
+; '((define (cons x y) (lambda (m) (m x y)))
+;   (define (car z) (z (lambda (p q) p)))
+;   (define (cdr z) (z (lambda (p q) q))))
+; the-global-environment)
+
+;; 4.34
+(eval-sequence
+ '((define (cons x y) (list-underlying 'cons-return (lambda (m) (m x y))))
+   (define (car z) ((list-ref-underlying z 1) (lambda (p q) p)))
+   (define (cdr z) ((list-ref-underlying z 1) (lambda (p q) q))))
+ the-global-environment)
+
 (define input-prompt  ";;; M-Eval input:")
 (define output-prompt ";;; M-Eval value:")
+
+;; 4.34
+(define (cons-return? z)
+  (and (pair? z)
+       (tagged-list? z 'cons-return)))
 
 (define (driver-loop)
   (prompt-for-input input-prompt)
@@ -632,16 +666,26 @@
   (display string) (newline))
 
 (define (announce-output string)
-  (newline) (display string) (newline))
+  (newline)
+  (display string)
+  (newline))
 
+;; 4.34 modified
 (define (user-print object)
-  (if (compound-procedure? object)
-      (display
-       (list 'compound-procedure
-             (procedure-parameters object)
-             (procedure-body object)
-             '<procedure-env>))
-      (display object)))
+  (display (cond ((compound-procedure? object)
+                  (list 'compound-procedure
+                        (procedure-parameters object)
+                        (procedure-body object)
+                        '<procedure-env>))
+                 ((cons-return? object)
+                  (let ((cons-env (cadddr (cadr object))))
+                    ;; Always thunks if cons is lazy.
+                    ;; There's gotta be a more straightforward way to do this.
+                    (list (thunk-exp (lookup-variable-value 'x cons-env))
+                          '&
+                          ;; Has issues with for instance (cdr integers)
+                          (thunk-exp (lookup-variable-value 'y cons-env)))))
+                 (else object))))
 
 (define (display-runtime time)
   (display "Runtime: ")
