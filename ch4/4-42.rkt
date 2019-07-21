@@ -12,8 +12,9 @@
         ((member (car items) (cdr items)) false)
         (else (distinct? (cdr items)))))
 
-(define (xor a b)
-  (not (eq? a b)))
+(define (xor a b) ; or (not (eq? a b))
+  (or (and a (not b))
+      (and (not a) b)))
 
 ;;; 4.42
 
@@ -27,7 +28,7 @@
         (mary (amb 1 2 3 4 5)))
     (require
      (distinct? (list betty ethel joan kitty mary)))
-    (require (xor (= kitty 5) (= betty 3)))
+    (require (xor (= kitty 2) (= betty 3)))
     (require (xor (= ethel 1) (= joan 2)))
     (require (xor (= joan 3) (= ethel 5)))
     (require (xor (= kitty 2) (= mary 4)))
@@ -38,5 +39,4 @@
           (list 'kitty kitty)
           (list 'mary mary))))
 
-; ((betty 2) (ethel 1) (joan 3) (kitty 5) (mary 4))
-
+; ((betty 3) (ethel 5) (joan 2) (kitty 1) (mary 4))
