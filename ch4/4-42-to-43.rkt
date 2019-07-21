@@ -85,3 +85,7 @@
                             (list 'hall d-hall)
                             (list 'barnacle d-barnacle)
                             (list 'parker d-parker)))))))))))))
+
+;; Simpler solutions:
+;; http://community.schemewiki.org/?sicp-ex-4.43
+;; https://eli.thegreenplace.net/2008/01/05/sicp-section-432
