@@ -106,3 +106,72 @@
 
 ;;; 4.41
 
+;;; Deps
+
+(define (accumulate op initial sequence)
+  (if (null? sequence)
+      initial
+      (op (car sequence)
+          (accumulate op 
+                      initial 
+                      (cdr sequence)))))
+
+(define (flatmap proc seq)
+  (accumulate append nil (map proc seq)))
+
+(define (enumerate-interval low high)
+  (if (> low high)
+      nil
+      (cons low 
+            (enumerate-interval 
+             (+ low 1) 
+             high))))
+
+(define (filter predicate sequence)
+  (cond ((null? sequence) nil)
+        ((predicate (car sequence))
+         (cons (car sequence)
+               (filter predicate 
+                       (cdr sequence))))
+        (else  (filter predicate 
+                       (cdr sequence)))))
+
+;;; Main
+
+;; Not the most efficient.
+
+(define (md3)
+  (define perms
+    (flatmap (lambda (a)
+               (flatmap (lambda (b) 
+                          (flatmap (lambda (c)
+                                     (flatmap (lambda (d)
+                                                (map (lambda (e)
+                                                       (list a b c d e))
+                                                     (enumerate-interval 1 5)))
+                                              (enumerate-interval 1 5)))
+                                   (enumerate-interval 1 5)))
+                        (enumerate-interval 1 5)))
+             (enumerate-interval 1 5)))
+  (define (with-names p)
+    (list (list 'baker (list-ref p 0))
+          (list 'cooper (list-ref p 1))
+          (list 'miller (list-ref p 2))
+          (list 'fletcher (list-ref p 3))
+          (list 'smith (list-ref p 4))))
+  (map with-names
+       (filter (lambda (p)
+                 (let ((baker (list-ref p 0))
+                       (cooper (list-ref p 1))
+                       (miller (list-ref p 2))
+                       (fletcher (list-ref p 3))
+                       (smith (list-ref p 4)))
+                   (and (not (= 5 baker))
+                        (not (= 1 cooper))
+                        (not (= 5 fletcher))
+                        (not (= 1 fletcher))
+                        (> miller cooper)
+                        (not (= (abs (- smith fletcher)) 1))
+                        (not (= (abs (- fletcher cooper)) 1))
+                        (distinct? p))))
+               perms)))
