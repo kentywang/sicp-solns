@@ -17,10 +17,22 @@
 (interpret '(define articles '(article the a)))
 (interpret '(define prepositions '(prep for to in by with)))
 
+;; 4.48
+(interpret '(define conjunctions '(conj and or)))
+
+;; 4.48
 (interpret '(define (parse-sentence)
-              (list 'sentence
-                    (parse-noun-phrase)
-                    (parse-verb-phrase))))
+              (define (maybe-extend sent)
+                (amb sent
+                     (maybe-extend
+                      (list 'compound-sentence
+                            sent
+                            (parse-word conjunctions)
+                            (parse-sentence)))))
+              (maybe-extend
+               (list 'sentence
+                     (parse-noun-phrase)
+                     (parse-verb-phrase)))))
 
 (interpret '(define (parse-noun-phrase)
               (define (maybe-extend noun-phrase)
@@ -63,3 +75,9 @@
                 sent)))
 
 (driver-loop)
+
+;;; Tests
+
+;(parse '(the professor lectures to the student with the cat))
+;(parse '(the professor lectures and the class eats))
+;(parse '(the professor lectures to the student and the student sleeps with the cat or the class eats))
