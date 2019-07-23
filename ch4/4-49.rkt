@@ -50,8 +50,7 @@
 
 ;; 4.49
 (interpret '(define (parse-word word-list)
-              (let ((found-word (cadr word-list)))
-                (list (car word-list) found-word))))
+              (list (car word-list) (cadr word-list))))
 
 (interpret '(define *unparsed* '()))
 (interpret '(define (parse input)
