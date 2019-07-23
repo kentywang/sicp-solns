@@ -81,3 +81,10 @@
 ;(parse '(the professor lectures to the student with the cat))
 ;(parse '(the professor lectures and the class eats))
 ;(parse '(the professor lectures to the student and the student sleeps with the cat or the class eats))
+
+;; Edit: adjectives are adverbs aren't apparently hard either. I just need to have
+;; an amb without and with the adj/adv. I need to recompute article and noun or
+;; the verb in the second path of the amb though, since the order is vital to
+;; the parsing and mutation.
+
+;; http://community.schemewiki.org/?sicp-ex-4.48
