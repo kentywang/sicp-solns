@@ -1,5 +1,7 @@
 #lang sicp
 
+;;; 4.45
+
 ;;; Deps
 
 (define (require p)
@@ -208,3 +210,25 @@
        (prep with)
        (simple-noun-phrase
         (article the) (noun cat))))))))
+
+;;; 4.46
+
+;; If evaluation of amb happens RTL, then we enter an infinite recursion
+;; down maybe-extend.
+
+;; More generally, if we have our entire evaluator RTL, then we start with
+;; parsing verbs, and that would fail in a SVO language.
+
+;; 4.47
+
+;; His change would make the evaluator try the verb WHILE evaluating the amb.
+;; so the assignment is backtracked if the first option fails. But then the
+;; second option includes a recursive call to the parsing procedure which then
+;; makes the same mistake again, on another layer to the recursive call stack.
+
+;; The original approach deals with this by tryingt the verb BEFORE the amb, so
+;; if it fails, the backtracking does not reverse the assignment so we can use
+;; it and look forward in the sentence.
+
+;; Also interchanging the order of expressions in the amb is more obviously
+;; flawed; we enter a simple infinite recursive loop.
