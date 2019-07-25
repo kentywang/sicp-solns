@@ -2,7 +2,8 @@
 
 ;; Biggest issue was figuring out that I can't call random in the analysis of
 ;; the ramb, since that would make the random order permanent through multiple
-;; executions.
+;; executions. If that random order happens to place the maybe-extend choice
+;; first, then it will be there first aways, so will lead to an infinite loop.
 
 (define apply-in-underlying-scheme apply)
 
