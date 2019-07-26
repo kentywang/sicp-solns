@@ -648,7 +648,34 @@
               (require (not (eq? x y)))
               (list x y count))))
 
-(driver-loop)
-
 ;; If it was just set!, the count would stay at 1 for both the initial choice
 ;; and the try-again choice.
+
+;;; 4.53
+
+(interpret '(define (prime-sum-pair list1 list2)
+              (let ((a (an-element-of list1))
+                    (b (an-element-of list2)))
+                (require (= prime? (+ a b))
+                (list a b))))
+
+;; Need prime? procedure
+
+(interpret '(define (test-2)
+              (let ((pairs '()))
+                (if-fail 
+                 (let ((p (prime-sum-pair 
+                           '(1 3 5 8) 
+                           '(20 35 110))))
+                   (permanent-set! pairs 
+                                   (cons p pairs))
+                   (amb))
+                 pairs))))
+
+;; Should evaluate to '((8 35) (3 110) (3 20)), basically consing on all
+;; the remaining prime sum pairs since those are the only choices that make
+;; it to the permanent-set! evaluation. All those options fail on hitting the
+;; (amb), so the consequent of the if-fail is evaluated, returning the value
+;; of pairs.
+
+(driver-loop)
