@@ -24,12 +24,14 @@
          (analyze-variable exp))
         ((assignment? exp) 
          (analyze-assignment exp))
-        ((permanent-assignment? exp)
+        ((permanent-assignment? exp) ; 4.51
          (analyze-permanent-assignment exp))
         ((definition? exp) 
          (analyze-definition exp))
         ((if? exp) 
          (analyze-if exp))
+        ((if-fail? exp) ; 4.52
+         (analyze-if-fail exp))
         ((lambda? exp) 
          (analyze-lambda exp))
         ((begin? exp) 
@@ -46,6 +48,19 @@
          (error "Unknown expression 
                  type: ANALYZE" 
                 exp))))
+
+;;; 4.52
+
+(define (if-fail? exp) (tagged-list? exp 'if-fail))
+
+(define (analyze-if-fail exp)
+  (let ((pproc (analyze (cadr exp)))
+        (cproc (analyze (caddr exp))))
+    (lambda (env succeed fail)
+      (pproc env
+             succeed ; Why would λ(val, fail) break try again?
+             (lambda ()
+               (cproc env succeed fail))))))
 
 ;;; Amb selectors for analyze
 
@@ -338,6 +353,7 @@
         (list 'display display)
         (list 'newline newline)
         (list 'random random)
+        (list 'even? even?)
         (list 'eq? eq?))) ; All other primitives go here.
 
 (define (primitive-procedure-names)
