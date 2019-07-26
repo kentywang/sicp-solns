@@ -1,13 +1,5 @@
 #lang sicp
 
-;; Biggest issue was figuring out that I can't call random in the analysis of
-;; the ramb, since that would make the random order permanent through multiple
-;; executions. (This is because the analyzed ramb is preserved in the stored
-;; procedure body, meaning every call to the procedure executes the same thing.
-
-;; If that random order happens to place the maybe-extend choice
-;; first, then it will be there first aways, so will lead to an infinite loop.
-
 (define apply-in-underlying-scheme apply)
 
 ;(define (eval exp env) ((analyze exp) env))
@@ -24,14 +16,10 @@
          (analyze-variable exp))
         ((assignment? exp) 
          (analyze-assignment exp))
-        ((permanent-assignment? exp) ; 4.51
-         (analyze-permanent-assignment exp))
         ((definition? exp) 
          (analyze-definition exp))
         ((if? exp) 
          (analyze-if exp))
-        ((if-fail? exp) ; 4.52
-         (analyze-if-fail exp))
         ((lambda? exp) 
          (analyze-lambda exp))
         ((begin? exp) 
@@ -41,7 +29,8 @@
          (analyze (cond->if exp)))
         ((let? exp)
          (analyze (let->combination exp)))
-        ((amb? exp) (analyze-amb exp)) ; New
+        ((amb? exp) (analyze-amb exp))
+        ((require? exp) (analyze-require exp))
         ((application? exp) 
          (analyze-application exp))
         (else
@@ -49,18 +38,24 @@
                  type: ANALYZE" 
                 exp))))
 
-;;; 4.52
+;;; require
 
-(define (if-fail? exp) (tagged-list? exp 'if-fail))
+(define (require? exp) 
+  (tagged-list? exp 'require))
 
-(define (analyze-if-fail exp)
-  (let ((pproc (analyze (cadr exp)))
-        (cproc (analyze (caddr exp))))
+(define (require-predicate exp) 
+  (cadr exp))
+
+(define (analyze-require exp)
+  (let ((pproc (analyze 
+                (require-predicate exp))))
     (lambda (env succeed fail)
       (pproc env
-             succeed ; Why would λ(val, fail) break try again?
-             (lambda ()
-               (cproc env succeed fail))))))
+             (lambda (pred-value fail2)
+               (if (not (true? pred-value))
+                   (fail2)
+                   (succeed 'ok fail2)))
+             fail))))
 
 ;;; Amb selectors for analyze
 
@@ -89,10 +84,6 @@
 
 (define (assignment? exp)
   (tagged-list? exp 'set!))
-
-;; 4.51
-(define (permanent-assignment? exp)
-  (tagged-list? exp 'permanent-set!))
 
 (define (assignment-variable exp)
   (cadr exp))
@@ -341,20 +332,14 @@
   (list (list 'car car)
         (list 'cdr cdr)
         (list 'cons cons)
+        (list 'null? null?)
         (list '+ +)
         (list '- -)
         (list '* *)
         (list '/ /)
-        (list '= =)
         (list 'list list)
-        (list 'cadr cadr)
         (list 'not not)
-        (list 'null? null?)
-        (list 'display display)
-        (list 'newline newline)
-        (list 'random random)
-        (list 'even? even?)
-        (list 'eq? eq?))) ; All other primitives go here.
+        (list '= =))) ; All other primitives go here.
 
 (define (primitive-procedure-names)
   (map car primitive-procedures))
@@ -538,18 +523,6 @@
                     (fail2)))))
                fail))))
 
-;; 4.51
-(define (analyze-permanent-assignment exp)
-  (let ((var (assignment-variable exp))
-        (vproc (analyze 
-                (assignment-value exp))))
-    (lambda (env succeed fail)
-      (vproc env
-             (lambda (val fail2)
-               (set-variable-value! var val env)
-               (succeed 'ok fail2))
-             fail))))
-  
 (define (analyze-application exp)
   (let ((fproc (analyze (operator exp)))
         (aprocs (map analyze (operands exp))))
@@ -618,6 +591,7 @@
                (try-next (cdr choices))))))
       (try-next cprocs))))
 
+
 (define (interpret input)
   (ambeval input
            the-global-environment
@@ -630,52 +604,17 @@
              (display "fail")
              (newline))))
 
-;; 4.51
-
-(interpret '(define (require p) (if (not p) (amb))))
-
 (interpret '(define (an-element-of items)
               (require (not (null? items)))
               (amb (car items) 
                    (an-element-of (cdr items)))))
 
-(interpret '(define count 0))
-
-(interpret '(define (test)
-              (let ((x (an-element-of '(a b c)))
-                  (y (an-element-of '(a b c))))
-              (permanent-set! count (+ count 1))
-              (require (not (eq? x y)))
-              (list x y count))))
-
-;; If it was just set!, the count would stay at 1 for both the initial choice
-;; and the try-again choice.
-
-;;; 4.53
-
-(interpret '(define (prime-sum-pair list1 list2)
+(interpret '(define (same-pair list1 list2)
               (let ((a (an-element-of list1))
                     (b (an-element-of list2)))
-                (require (= prime? (+ a b)))
+                (require (= a b))
                 (list a b))))
 
-;; Need prime? procedure
-
-(interpret '(define (test-2)
-              (let ((pairs '()))
-                (if-fail 
-                 (let ((p (prime-sum-pair 
-                           '(1 3 5 8) 
-                           '(20 35 110))))
-                   (permanent-set! pairs 
-                                   (cons p pairs))
-                   (amb))
-                 pairs))))
-
-;; Should evaluate to '((8 35) (3 110) (3 20)), basically consing on all
-;; the remaining prime sum pairs since those are the only choices that make
-;; it to the permanent-set! evaluation. All those options fail on hitting the
-;; (amb), so the consequent of the if-fail is evaluated, returning the value
-;; of pairs.
+;Type (same-pair (list 1 2 3 4 5) (list 1 3 5))
 
 (driver-loop)
