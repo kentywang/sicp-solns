@@ -16,7 +16,7 @@
 (run-query '(assert! (rule (grandson ?g ?s)
                            (and (son ?f ?s)
                                 (son ?g ?f)))))
-(run-query '(assert! (rule (son ?m ?s)
+(run-query '(assert! (rule (son ?m ?s)          ; For rules at least:
                            (and (wife ?m ?w)    ; Order matters! If son assert
                                 (son ?w ?s))))) ; is first, then never stops.
 
