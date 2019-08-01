@@ -37,3 +37,25 @@ though there is no finite solution for the first:
 
 (or (married Mickey ?who)
     (son Adam ?x))
+
+4.73
+
+We should note that we're dealing with interleaving a stream of streams with
+itself rather than interleaving two separate streams.
+
+The issue with trying to use a normal interleaving procedure in flattening a
+stream of streams is that we will pass the evaluation of the flattening
+procedure on the rest of the stream to the interleaving procedure as its
+second argument. This means the shape of the process is to immediately expand
+to a nesting of interleave calls instead of having one interleave call work
+through two streams at a time. Also, since we must unfurl all the nested
+flatten calls out to interleaves, we must process the last elements first,
+meaning if the stream is infinite, we won't ever return (and also defeats
+the purpose of streams).
+
+By delaying the second argument to interleave, we can have a controlled
+processing of interleaving so that we can process a possibly-infinite stream
+to be flattened in a more front-to-back sequence. This will thus allow
+interleave applications to be "interleaved" with flatten applications, rather
+than flattening all first before interleaving. (Will there still be deeply
+nested interleave calls though?)
