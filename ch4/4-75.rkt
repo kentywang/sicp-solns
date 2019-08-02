@@ -583,3 +583,5 @@
 (run-query '(unique (job ?x (computer programmer))))
 (run-query '(and (job ?x ?j) 
                  (unique (job ?anyone ?j))))
+(run-query '(and (supervisor ?a ?b)
+                 (unique (supervisor ?who ?b))))
