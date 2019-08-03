@@ -98,6 +98,7 @@
 
 ;; 4.76
 ;; This would be simpler with a hash table.
+;; Or could use extend-if-possible.
 (define (merge-frames f1 f2)
   (define (compat? a b)
     (if (or (null? a)
