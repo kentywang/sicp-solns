@@ -17,6 +17,9 @@
 ;; if all its variables are bound in the frame, it runs the qeval on the
 ;; promise's pattern, removing the frame if any qevals return non-empty frames.
 
+;; Edit: Realized I forgot about adding in lisp-value support. Simple change,
+;; just need to store the type of the pattern (either 'not or 'lisp).
+
 (require (rename-in "amb-eval-dep2.rkt"
                     [eval mc-eval]
                     [apply mc-apply])
@@ -139,13 +142,17 @@
 
 ;;; 4.77
 
+(define (make-pattern typex pattern)
+  (mcons typex pattern))
+
 (define (negate-2 operands frame-stream)
   (stream-flatmap resolve-promises
                   (stream-map (lambda (f)
                                 (add-promise
                                  (make-promise
                                   (list-vars (negated-query operands))
-                                  (negated-query operands))
+                                  (make-pattern 'not
+                                                (negated-query operands)))
                                  f))
                               frame-stream)))
 
@@ -174,11 +181,23 @@
 ;  (newline)
   (if (null? (promises f))
       (begin ;(display "SINGLETON")
-             (singleton-stream f))
+        (singleton-stream f))
       (let ((first-promise (mcar (promises f))))
+        ;(display (promise-pattern first-promise))
+        ;  (newline)(newline)
         (if (all-vars-bound? first-promise f)
-            (if (stream-null? (qeval (promise-pattern first-promise)
-                                     (singleton-stream (make-frame (mcdr (promises f)) (bindings f)))))
+            (if (cond ((eq? 'not (pattern-type (promise-pattern first-promise)))
+                       (stream-null?
+                        (qeval (pattern-pattern (promise-pattern first-promise))
+                               (singleton-stream (make-frame (mcdr (promises f))
+                                                             (bindings f))))))
+                      ((eq? 'lisp (pattern-type (promise-pattern first-promise)))
+                       (execute
+                        (instantiate
+                            (pattern-pattern (promise-pattern first-promise))
+                          f
+                          (lambda (v f)
+                            (error "Unknown pat var -- LISP-VALUE" v))))))
                 (resolve-promises
                  (make-frame (mcdr (promises f)) (bindings f)))
                 the-empty-stream)
@@ -205,6 +224,15 @@
              (iter (mcdr vs)))))
   (iter (promise-vars p)))
 
+(define (lisp-value-2 call frame-stream)
+  (stream-flatmap resolve-promises
+                  (stream-map (lambda (f)
+                                (add-promise
+                                 (make-promise
+                                  (list-vars call)
+                                  (make-pattern 'lisp call))
+                                 f))
+                              frame-stream)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -547,6 +575,9 @@
       '()
       (mcdr promise)))
 
+(define pattern-type mcar)
+(define pattern-pattern mcdr)
+
 (define (make-frame promises bindings)
   (mcons promises bindings))
 
@@ -588,6 +619,7 @@
   (put 'not 'qeval negate)
   (put 'nat 'qeval negate-2)
   (put 'lisp-value 'qeval lisp-value)
+  (put 'lisp 'qeval lisp-value-2)
   (put 'always-true 'qeval always-true)
   (deal-out rules-and-assertions '() '()))
 
@@ -707,6 +739,12 @@
 (run-query '(and (nat (job ?x (computer programmer)))
                  (supervisor ?x (Bitdiddle Ben))))
 
+(run-query '(and (supervisor ?x (Bitdiddle Ben))
+                 (not (job ?x (computer technician)))
+                 (salary ?x ?amt)
+                 (lisp-value > ?amt 39000)))
+
 (run-query '(and (nat (job ?x (computer technician)))
-                 (nat (salary ?x 40000)) ; Filters out Alicia.
+                 (lisp > ?amt 39000)
+                 (salary ?x ?amt)
                  (supervisor ?x (Bitdiddle Ben))))
