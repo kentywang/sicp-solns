@@ -16,7 +16,8 @@
 ;; here! The (married Mickey ?who) returns only calculates and returns one
 ;; result until we tell the program to try again (rather than trying to collect
 ;; all the results to return at once), so (somewhat paradoxically) the
-;; non-stream implementation is lazier.
+;; non-stream implementation is lazier. We essentially delay any (perhaps
+;; unintended) recursive rule applications.
 
 ;; Troubles: How can we get negate to work?
 ;; A: When entering negate, subsequent evaluation enters amb-free mode to
