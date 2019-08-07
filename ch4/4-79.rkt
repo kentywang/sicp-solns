@@ -1,5 +1,10 @@
 #lang racket
 
+;; Strategy: Remove variable replacement procedures. Extend top frame on
+;; assertion matching. On unify match, use the full environment to generate
+;; the unified env, but only take the top frame to use in the qeval of the
+;; body. I don't really understand the intricacies, or if this works 100%.
+
 (require (rename-in "amb-eval-dep2.rkt"
                     [eval mc-eval]
                     [apply mc-apply])
@@ -56,9 +61,11 @@
            (query-driver-loop)))))
 
 (define (instantiate exp frame unbound-var-handler)
+ ; (display "INSTANTIATE")(newline)(display exp)(newline)(display frame)(newline)(newline)
   (define (copy exp)
     (cond ((var? exp)
            (let ((binding (find-binding exp frame)))
+            ; (display "binding: ")(display binding)(newline)
              (if binding
                  (copy (binding-value binding))
                  (unbound-var-handler exp frame))))
@@ -72,10 +79,13 @@
 ;;;The Evaluator
 
 (define (qeval query frame-stream)
-  (let ((qproc (get (type query) 'qeval)))
-    (if qproc
-        (qproc (contents query) frame-stream)
-        (simple-query query frame-stream))))
+  (let ((ret (let ((qproc (get (type query) 'qeval)))
+               (if qproc
+                   (qproc (contents query) frame-stream)
+                   (simple-query query frame-stream)))))
+   ; (display "Qeval return: ")(newline)
+   ; (display-stream ret)(newline)(newline)
+    ret))
 
 ;;;Simple queries
 
@@ -108,12 +118,16 @@
 ;;;Filters
 
 (define (negate operands frame-stream)
+  ;(display 'negate!)(newline)(display operands)(newline)(newline)
   (stream-flatmap
    (lambda (frame)
      (if (stream-null? (qeval (negated-query operands)
                               (singleton-stream frame)))
-         (singleton-stream frame)
-         the-empty-stream))
+         (begin ;(display 'negate-consequent)(newline)
+                ;(display frame)(newline)(newline)
+                (singleton-stream frame))
+         (begin ;(display 'negate-alt)(newline)
+                the-empty-stream)))
    frame-stream))
 
 (define (lisp-value call frame-stream)
@@ -147,8 +161,12 @@
   (let ((match-result
          (pattern-match query-pat assertion query-frame)))
     (if (eq? match-result 'failed)
-        the-empty-stream
-        (singleton-stream match-result))))
+        (begin ;(display 'FAILD)(newline)
+               the-empty-stream)
+        (begin ;(display "Assertion match:")(newline)
+               ;(display "PATTERN: ")(display query-pat)(newline)
+               ;(display "FRAME: ")(display match-result)(newline)(newline)
+               (singleton-stream match-result)))))
 
 (define (pattern-match pat dat frame)
   (cond ((eq? frame 'failed) 'failed)
@@ -177,19 +195,31 @@
                   (fetch-rules pattern frame)))
 
 (define (apply-a-rule rule query-pattern query-frame)
+  ;(display "APPLY RULE:")(newline)
+  ;(display rule)(newline)
+  ;(display query-pattern)(newline)
+  ;(display query-frame)(newline)(newline)
   (let ((unify-result
          (unify-match query-pattern
-                      (conclusion rule) ; Removed rename-variables-in.
-                      the-empty-environment)))
+                      (conclusion rule)
+                      (extend-environment '() query-frame))))
+    ;(display "UNIFY RESLUT:")(newline)(display unify-result)(newline)(newline)
     (if (eq? unify-result 'failed)
         the-empty-stream
-        (qeval (rule-body rule)
+        (let ((arst (qeval (rule-body rule)
                (singleton-stream (extend-environment
-                                  unify-result
-                                  query-frame))))))
+                                  (first-frame unify-result)
+                                  query-frame)))))
+         ; (display "APPLY END: ")(display arst)(newline)
+          arst))))
 
 ;; Unify-match creates a new frame to be appended to the query environment.
 (define (unify-match p1 p2 frame)
+ ; (display "UNIFY MATCH:")(newline)
+ ; (display "p1: ")(display p1)(newline)
+ ; (display "p2: ")(display p2)(newline)
+ ; (display "Frame: ")(display frame)(newline)
+  (newline)
   (cond ((eq? frame 'failed) 'failed)
         ((equal? p1 p2) frame)
         ((var? p1) (extend-if-possible p1 p2 frame))
@@ -235,13 +265,18 @@
 ;;; NEW
 
 (define (enclosing-environment env) (mcdr env))
-(define (first-frame env) (mcar env))
+(define (first-frame env) (if (null? env)
+                              '()
+                              (mcar env)))
 (define the-empty-environment '())
 (define (extend-environment new-frame base-env)
   (mcons new-frame base-env))
 
 (define (find-binding var env)
+  ;(display "FIND BINDING")(newline)(display var)(newline)(display env)(newline)(newline)
   (define (scan frame)
+   ; (display "scan frame: ")(display var)
+   ; (newline)(display frame)(newline)(newline)
     (cond ((null? frame)
            (find-binding var (enclosing-environment env)))
           ((equal? var
@@ -428,10 +463,16 @@
 ;   (massoc variable frame))
 
 (define (extend-top-frame variable value env)
-  (mcons (mcons (make-binding variable value)
-                (mcar env))
-         (mcdr env)))
-
+ ; (display "ETF before: ")(display env)(newline)(newline)
+  (let ((after (if (null? env)
+                   (mcons (mcons (make-binding variable value)
+                                 '())
+                          '())
+                   (mcons (mcons (make-binding variable value)
+                                 (mcar env))
+                          (mcdr env)))))
+   ; (display "ETF after: ")(display after)(newline)(newline)
+    after))
 
 ;;;;From Section 4.1
 
@@ -545,6 +586,21 @@
       (or (supervisor ?staff-person ?boss)
           (and (supervisor ?staff-person ?middle-manager)
                (outranked-by ?middle-manager ?boss))))
+
+;; 4.79
+(son Adam Cain) (son Cain Enoch)
+(son Enoch Irad) (son Irad Mehujael)
+(son Mehujael Methushael)
+(son Methushael Lamech)
+(wife Lamech Ada) (son Ada Jabal)
+(son Ada Jubal)
+
+;; 4.79: My new "block-structure" rule. Not sure how this should work though,
+;; or what it even means.
+(rule (parent ?young ?old)
+      (rule (grandson ?older ?young)
+            (and (son ?older ?old)
+                 (son ?old ?young))))
 ))
 
 ;; Do following to reinit the data base from microshaft-data-base
@@ -580,12 +636,25 @@
 
 ;;; Tests
 
-(run-query '(and (job ?person (computer programmer))
-                 (address ?person ?where)))
-(run-query '(or (supervisor ?x (Bitdiddle Ben))
-                (supervisor ?x (Hacker Alyssa P))))
-(run-query '(wheel ?who))
-(run-query '(outranked-by (Scrooge Eben) ?x))
-(run-query '(and (supervisor ?x (Bitdiddle Ben))
-                 (not (job ?x (computer programmer)))))
-(run-query '(lives-near ?x (Bitdiddle Ben)))
+;(run-query '(and (job ?person (computer programmer))
+;                 (address ?person ?where)))
+;(run-query '(or (supervisor ?x (Bitdiddle Ben))
+;                (supervisor ?x (Hacker Alyssa P))))
+;(run-query '(and (supervisor ?x (Bitdiddle Ben))
+;                 (not (job ?x (computer programmer)))))
+;(run-query '(wheel ?who))
+;(run-query '(outranked-by (Scrooge Eben) ?x))
+;(run-query '(same 'A 'A))
+;(run-query '(same 'A 'B))
+;(run-query '(and (address ?person-1 (?town . ?rest-1))
+;                 (address ?person-2 (?town . ?rest-2))
+;                 (not (same ?person-1 ?person-2))))
+;(run-query '(and (supervisor ?x (Bitdiddle Ben))
+;                 (same ?x ?x)))
+;(run-query '(and (supervisor ?x (Bitdiddle Ben))
+;                 (not (job ?x (computer programmer)))))
+;(run-query '(and (supervisor ?x (Bitdiddle Ben))
+;                 (not (same ?x (Fect Cy D)))))
+;(run-query '(lives-near ?x (Bitdiddle Ben)))
+;(run-query '(and (supervisor ?x (Bitdiddle Ben))
+;                 (not (job ?x (computer programmer)))))
