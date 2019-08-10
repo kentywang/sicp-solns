@@ -8,7 +8,7 @@
    (assign store (op abs) (reg store)) ; store←abs
    (test (op <) (reg store) (const 0.001))
    (branch (label sqrt-done))
- improve
+ ; improve: label not needed
    (assign store (op /) (reg x) (reg guess)) ; store←/
    (assign guess (op avg) (reg guess) (reg store)) ; guess←avg
    (goto (label good-enough?))
