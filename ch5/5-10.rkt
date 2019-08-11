@@ -3,6 +3,9 @@
 ;; Changing to allow (assign some-register (op + (const 1) (const 2)))
 ;; instead of (assign some-register (op +) (const 1) (const 2)).
 
+;; Yes, thanks to the abstraction provided by the selectors, we can
+;; definitely change the syntax by just modifying the syntax procedures.
+
 (define (operation-exp? exp)
   (and (pair? exp)
        (tagged-list? (car exp) 'op)))
