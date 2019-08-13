@@ -5,14 +5,9 @@
       (eq? (car exp) tag)
       false))
 
-(define (make-machine register-names 
-                      ops 
+(define (make-machine ops 
                       controller-text)
   (let ((machine (make-new-machine)))
-    (for-each (lambda (register-name)
-                ((machine 'allocate-register) 
-                 register-name))
-              register-names)
     ((machine 'install-operations) ops)
     ((machine 'install-instruction-sequence)
      (assemble controller-text machine))
@@ -38,47 +33,24 @@
   ((register 'set) value))
 
 (define (make-stack)
-  (let ((s '())
-        (number-pushes 0)
-        (max-depth 0)
-        (current-depth 0))
+  (let ((s '()))
     (define (push x)
-      (set! s (cons x s))
-      (set! number-pushes (+ 1 number-pushes))
-      (set! current-depth (+ 1 current-depth))
-      (set! max-depth 
-            (max current-depth max-depth)))
+      (set! s (cons x s)))
     (define (pop)
       (if (null? s)
           (error "Empty stack: POP")
           (let ((top (car s)))
             (set! s (cdr s))
-            (set! current-depth
-                  (- current-depth 1))
             top)))
     (define (initialize)
       (set! s '())
-      (set! number-pushes 0)
-      (set! max-depth 0)
-      (set! current-depth 0)
       'done)
-
-    (define (print-statistics)
-      (newline)
-      (display (list 'total-pushes 
-                     '= 
-                     number-pushes
-                     'maximum-depth
-                     '=
-                     max-depth)))
     (define (dispatch message)
       (cond ((eq? message 'push) push)
             ((eq? message 'pop) (pop))
-            ((eq? message 'initialize)
+            ((eq? message 'initialize) 
              (initialize))
-            ((eq? message 'print-statistics)
-             (print-statistics))
-            (else
+            (else 
              (error "Unknown request: STACK"
                     message))))
     dispatch))
@@ -93,12 +65,10 @@
         (stack (make-stack))
         (the-instruction-sequence '()))
     (let ((the-ops
-           (list (list 'initialize-stack
-                       (lambda () 
-                         (stack 'initialize)))
-                 (list 'print-stack-statistics
-                       (lambda () 
-                         (stack 'print-statistics)))))
+           (list 
+            (list 'initialize-stack
+                  (lambda () 
+                    (stack 'initialize)))))
           (register-table
            (list (list 'pc pc) 
                  (list 'flag flag))))
@@ -118,8 +88,8 @@
                (assoc name register-table)))
           (if val
               (cadr val)
-              (error "Unknown register:" 
-                     name))))
+              (begin (allocate-register name)
+                     (lookup-register name)))))
       (define (execute)
         (let ((insts (get-contents pc)))
           (if (null? insts)
@@ -466,3 +436,52 @@
         (cadr val)
         (error "Unknown operation: ASSEMBLE"
                symbol))))
+
+;;; Tests
+
+(define expt-machine
+  (make-machine
+    (list (list '- -)
+          (list '+ +)
+          (list '< <))
+    '((assign continue (label fib-done))
+      fib-loop
+        (test (op <) (reg n) (const 2))
+        (branch (label immediate-answer))
+        ;; set up to compute Fib(n - 1)
+        (save continue)
+        (assign continue (label afterfib-n-1))
+        (save n)           ; save old value of n
+        (assign n 
+                (op -)
+                (reg n)
+                (const 1)) ; clobber n to n-1
+        (goto 
+         (label fib-loop)) ; perform recursive call
+      afterfib-n-1 ; upon return, val contains Fib(n - 1)
+        (restore n)
+        ;; set up to compute Fib(n - 2)
+        (assign n (op -) (reg n) (const 2))
+        (assign continue (label afterfib-n-2))
+        (save val)         ; save Fib(n - 1)
+        (goto (label fib-loop))
+      afterfib-n-2 ; upon return, val contains Fib(n - 2)
+        (restore n)      ; 5.11: Should fail now!
+        (restore continue)
+        (assign val        ; Fib(n - 1) + Fib(n - 2)
+                (op +) 
+                (reg val)
+                (reg n))
+        (goto              ; return to caller,
+         (reg continue))   ; answer is in val
+      immediate-answer
+        (assign val 
+                (reg n))   ; base case: Fib(n) = n
+        (goto (reg continue))
+      fib-done)))
+
+(set-register-contents! expt-machine 'n 10)
+
+(start expt-machine)
+
+(get-register-contents expt-machine 'val)
