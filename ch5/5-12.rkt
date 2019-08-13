@@ -564,12 +564,6 @@
         (goto (reg continue))
       fib-done)))
 
-(set-register-contents! expt-machine 'n 10)
-
-(start expt-machine)
-
-(get-register-contents expt-machine 'val)
-
 (expt-machine 'inst-by-type)
 (expt-machine 'goto-regs)
 (expt-machine 'saved-or-restored-regs)
