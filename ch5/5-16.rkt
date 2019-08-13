@@ -92,6 +92,7 @@
         (flag (make-register 'flag))
         (stack (make-stack))
         (the-instruction-sequence '())
+        (inst-ct 0)
         (trace? false))
     (let ((the-ops
            (list (list 'initialize-stack
@@ -126,11 +127,13 @@
           (if (null? insts)
               'done
               (begin
+                ;; 5.16
                 (if trace?
                     (begin (display (instruction-text (car insts)))
                            (newline)))
                 ((instruction-execution-proc 
                   (car insts)))
+                (set! inst-ct (inc inst-ct))
                 (execute)))))
       (define (dispatch message)
         (cond ((eq? message 'start)
@@ -158,6 +161,10 @@
               ((eq? message 'stack) stack)
               ((eq? message 'operations) 
                the-ops)
+              ((eq? message 'print-inst-ct) 
+               inst-ct)
+              ((eq? message 'reset-inst-ct)
+               (set! inst-ct 0))
               ((eq? message 'trace-on) 
                (set! trace? true))
               ((eq? message 'trace-off)
@@ -507,16 +514,26 @@
 
 (fact-machine 'trace-on)
 
-(set-register-contents! fact-machine 'n 10)
+(set-register-contents! fact-machine 'n 2)
 
 (start fact-machine)
 
+(display "2!: ")
 (get-register-contents fact-machine 'val)
+
+(display "2! instruction count: ")
+(fact-machine 'print-inst-ct)
+
+(fact-machine 'reset-inst-ct)
 
 (fact-machine 'trace-off)
 
-(set-register-contents! fact-machine 'n 10)
+(set-register-contents! fact-machine 'n 4)
 
 (start fact-machine)
 
+(display "4!: ")
 (get-register-contents fact-machine 'val)
+
+(display "4! instruction count: ")
+(fact-machine 'print-inst-ct)
