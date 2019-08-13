@@ -27,6 +27,15 @@
       (eq? (car exp) tag)
       false))
 
+(define (dedupe lst)
+  (define (iter x res)
+    (if (null? x)
+        res
+        (if (member (car x) res)
+            (iter (cdr x) res)
+            (iter (cdr x) (cons (car x) res)))))
+  (iter lst '()))
+
 ;;; Register machine
 
 (define (make-machine register-names 
@@ -172,41 +181,36 @@
                            message))))
       dispatch)))
 
+;; Still needs sort.
 (define (dedupe-and-sort seq)
-  (map (lambda (inst)
-         ;; Deduping and sorting goes here.
-;         (display (car inst))
-;         (newline)
-;         (newline)
+  (dedupe (map (lambda (inst)
          (instruction-text inst))
-       seq))
+       seq)))
 
 (define (goto-reg-refs seq)
-  (map (lambda (inst)
+  (dedupe (map (lambda (inst)
          (register-exp-reg (instruction-text inst)))
        (filter (lambda (inst)
-                 ;; Deduping still needed.
                  (and (eq? (car (instruction-text inst)) 'goto)
                       (register-exp? (register-exp-reg (instruction-text inst)))))
-               seq)))
+               seq))))
 
 (define (find-saved-or-restored-regs seq)
-  (map (lambda (inst)
+  (dedupe (map (lambda (inst)
          (stack-inst-reg-name (instruction-text inst)))
        (filter (lambda (inst)
-                 ;; Deduping still needed.
                  (or (eq? (car (instruction-text inst)) 'save)
                      (eq? (car (instruction-text inst)) 'restore)))
-               seq)))
+               seq))))
 
+;; Still needs sort.
 (define (find-assignment-sources seq)
-  (map (lambda (inst)
+  (dedupe (map (lambda (inst)
          (cons (assign-reg-name (instruction-text inst))
                (assign-value-exp (instruction-text inst))))
        (filter (lambda (inst)
-                 ;; Deduping still needed.
                  (eq? (car (instruction-text inst)) 'assign))
-               seq)))
+               seq))))
 
 (define (start machine)
   (machine 'start))
