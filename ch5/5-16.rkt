@@ -92,8 +92,11 @@
         (flag (make-register 'flag))
         (stack (make-stack))
         (the-instruction-sequence '())
+        ;; We _could_ make these registers, too.
         (inst-ct 0)
-        (trace? false))
+        (trace? false)
+        ;; 5.17: And now we shall.
+        (curr-inst-label (make-register 'cil)))
     (let ((the-ops
            (list (list 'initialize-stack
                        (lambda () 
@@ -165,7 +168,7 @@
                inst-ct)
               ((eq? message 'reset-inst-ct)
                (set! inst-ct 0))
-              ((eq? message 'trace-on) 
+              ((eq? message 'trace-on) ; 5.15
                (set! trace? true))
               ((eq? message 'trace-off)
                (set! trace? false))

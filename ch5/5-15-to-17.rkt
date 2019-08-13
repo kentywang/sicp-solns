@@ -1,5 +1,10 @@
 #lang sicp
 
+;; 5.17 Strategy: While extract-labels builds up a nesting of recursive frames that
+;; starts unfurling once we reach the end of the instruction text (thus allowing
+;; backwards traversal to build up the list in order), we keep track of the current-
+;; most label, and keep this binding in the frame.
+
 (define (tagged-list? exp tag)
   (if (pair? exp)
       (eq? (car exp) tag)
@@ -92,7 +97,11 @@
         (flag (make-register 'flag))
         (stack (make-stack))
         (the-instruction-sequence '())
-        (inst-ct 0))
+        ;; We _could_ make these registers, too.
+        (inst-ct 0)
+        (trace? false)
+        ;; 5.17: And now we shall.
+        (curr-inst-label (make-register 'curr-inst-label)))
     (let ((the-ops
            (list (list 'initialize-stack
                        (lambda () 
@@ -125,10 +134,17 @@
         (let ((insts (get-contents pc)))
           (if (null? insts)
               'done
-              (begin
+              (let* ((the-inst (car insts))
+                     (the-inst-text (instruction-text the-inst)))
+                ;; 5.16
+                (if trace?
+                    (begin (display (instruction-label the-inst))
+                           (display ':)
+                           (display the-inst-text)
+                           (newline)))
                 ((instruction-execution-proc 
-                  (car insts)))
-                (set! inst-ct (inc inst-ct))
+                  the-inst))
+                (set! inst-ct (inc inst-ct)) ; 5.15
                 (execute)))))
       (define (dispatch message)
         (cond ((eq? message 'start)
@@ -160,6 +176,10 @@
                inst-ct)
               ((eq? message 'reset-inst-ct)
                (set! inst-ct 0))
+              ((eq? message 'trace-on) ; 5.15
+               (set! trace? true))
+              ((eq? message 'trace-off)
+               (set! trace? false))
               (else (error "Unknown request: 
                             MACHINE"
                            message))))
@@ -187,12 +207,14 @@
   (extract-labels controller-text
     (lambda (insts labels)
       (update-insts! insts labels machine)
-      insts)))
+      insts)
+    'NO-LABEL))
 
-(define (extract-labels text receive)
+;; 5.17
+(define (extract-labels text receive curr-label)
   (if (null? text)
       (receive '() '())
-      (extract-labels 
+      (extract-labels
        (cdr text)
        (lambda (insts labels)
          (let ((next-inst (car text)))
@@ -206,9 +228,13 @@
                     labels))
                (receive 
                    (cons (make-instruction 
-                          next-inst)
+                          next-inst
+                          curr-label)
                          insts)
-                   labels)))))))
+                   labels))))
+       (if (symbol? (car text))
+           (car text)
+           curr-label))))
 
 (define (update-insts! insts labels machine)
   (let ((pc (get-register machine 'pc))
@@ -229,15 +255,21 @@
          ops)))
      insts)))
 
-(define (make-instruction text)
-  (cons text '()))
+;; 5.17: Modified to include label for instruction
+(define (make-instruction text curr-label)
+  (list text '() curr-label))
 (define (instruction-text inst) (car inst))
 (define (instruction-execution-proc inst)
-  (cdr inst))
+  (cadr inst))
+(define (instruction-label inst) (caddr inst))
 (define (set-instruction-execution-proc!
          inst
          proc)
-  (set-cdr! inst proc))
+  (set-car! (cdr inst) proc))
+(define (set-instruction-label!
+         inst
+         label-name)
+  (set-car! (cddr inst) label-name))
 
 (define (make-label-entry label-name insts)
   (cons label-name insts))
@@ -503,6 +535,8 @@
       (goto (reg continue))                   ; return to caller
       fact-done)))
 
+(fact-machine 'trace-on)
+
 (set-register-contents! fact-machine 'n 2)
 
 (start fact-machine)
@@ -514,6 +548,8 @@
 (fact-machine 'print-inst-ct)
 
 (fact-machine 'reset-inst-ct)
+
+(fact-machine 'trace-off)
 
 (set-register-contents! fact-machine 'n 4)
 
