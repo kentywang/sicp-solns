@@ -1,5 +1,8 @@
 #lang sicp
 
+;; 5.19 Strategy: Basically an extension of 5.17 (labels for each inst),
+;; but also keeping track of the instruction index for the labels.
+
 (define (tagged-list? exp tag)
   (if (pair? exp)
       (eq? (car exp) tag)
@@ -92,11 +95,8 @@
         (flag (make-register 'flag))
         (stack (make-stack))
         (the-instruction-sequence '())
-        ;; We _could_ make these registers, too.
-        (inst-ct 0)
-        (trace? false)
-        ;; 5.17: And now we shall.
-        (curr-inst-label (make-register 'cil)))
+        (curr-inst-label (make-register 'curr-inst-label))
+        (breakpoints '()))
     (let ((the-ops
            (list (list 'initialize-stack
                        (lambda () 
@@ -127,17 +127,28 @@
                      name))))
       (define (execute)
         (let ((insts (get-contents pc)))
-          (if (null? insts)
-              'done
-              (begin
-                ;; 5.16
-                (if trace?
-                    (begin (display (instruction-text (car insts)))
-                           (newline)))
-                ((instruction-execution-proc 
-                  (car insts)))
-                (set! inst-ct (inc inst-ct))
-                (execute)))))
+          (cond ((null? insts) 'done)
+                ((break-here? (car insts)) => identity)
+                (else
+                 (display (instruction-label (car insts)))
+                 (display (instruction-text (car insts)))
+                 (newline)
+                 ((instruction-execution-proc 
+                   (car insts)))
+                 (execute)))))
+      (define (break-here? inst)
+        (let ((label-and-idx (instruction-label inst)))
+          ;          (display 'label-indx:)(display label-and-idx)
+          ;          (if (member label-and-idx breakpoints)
+          ;              (display 'T)
+          ;              (display 'F))
+          ;          (newline)
+          (member label-and-idx breakpoints)))
+      (define (make-breakpoint label n)
+        (list label n))
+      (define (add-breakpoint! label n)
+        (set! breakpoints (cons (make-breakpoint label n) breakpoints))
+        breakpoints)
       (define (dispatch message)
         (cond ((eq? message 'start)
                (set-contents! 
@@ -164,18 +175,32 @@
               ((eq? message 'stack) stack)
               ((eq? message 'operations) 
                the-ops)
-              ((eq? message 'print-inst-ct) 
-               inst-ct)
-              ((eq? message 'reset-inst-ct)
-               (set! inst-ct 0))
-              ((eq? message 'trace-on) ; 5.15
-               (set! trace? true))
-              ((eq? message 'trace-off)
-               (set! trace? false))
+              ((eq? message 'set-breakpoint) 
+               add-breakpoint!)
+              ((eq? message 'proceed)
+               ;; Like execute, but without the breakpoint check case.
+               (let ((insts (get-contents pc)))
+                 (cond ((null? insts) 'done)
+                       (else
+                        ((instruction-execution-proc 
+                          (car insts)))
+                        (execute)))))
+              ((eq? message 'cancel-all-breakpoints) 
+               (set! breakpoints '()))
               (else (error "Unknown request: 
                             MACHINE"
                            message))))
       dispatch)))
+
+;; 5.19
+(define (set-breakpoint machine label n)
+  ((machine 'set-breakpoint) label n))
+
+(define (proceed-machine machine)
+  (machine 'proceed))
+
+(define (cancel-all-breakpoints machine)
+  (machine 'cancel-all-breakpoints))
 
 (define (start machine)
   (machine 'start))
@@ -195,16 +220,20 @@
 (define (get-register machine reg-name)
   ((machine 'get-register) reg-name))
 
+;; 5.17
 (define (assemble controller-text machine)
   (extract-labels controller-text
     (lambda (insts labels)
       (update-insts! insts labels machine)
-      insts)))
+      insts)
+    'NO-LABEL
+    0))
 
-(define (extract-labels text receive)
+;; 5.17
+(define (extract-labels text receive curr-label curr-label-idx)
   (if (null? text)
       (receive '() '())
-      (extract-labels 
+      (extract-labels
        (cdr text)
        (lambda (insts labels)
          (let ((next-inst (car text)))
@@ -218,9 +247,17 @@
                     labels))
                (receive 
                    (cons (make-instruction 
-                          next-inst)
+                          next-inst
+                          curr-label
+                          curr-label-idx)
                          insts)
-                   labels)))))))
+                   labels))))
+       (if (symbol? (car text))
+           (car text)
+           curr-label)
+       (if (symbol? (car text))
+           1 ; WHY?
+           (inc curr-label-idx)))))
 
 (define (update-insts! insts labels machine)
   (let ((pc (get-register machine 'pc))
@@ -241,15 +278,17 @@
          ops)))
      insts)))
 
-(define (make-instruction text)
-  (cons text '()))
+;; 5.17: Modified to include label for instruction
+(define (make-instruction text curr-label label-inst-idx)
+  (list text '() curr-label label-inst-idx))
 (define (instruction-text inst) (car inst))
 (define (instruction-execution-proc inst)
-  (cdr inst))
+  (cadr inst))
+(define (instruction-label inst) (cddr inst))
 (define (set-instruction-execution-proc!
          inst
          proc)
-  (set-cdr! inst proc))
+  (set-car! (cdr inst) proc))
 
 (define (make-label-entry label-name insts)
   (cons label-name insts))
@@ -515,28 +554,23 @@
       (goto (reg continue))                   ; return to caller
       fact-done)))
 
-(fact-machine 'trace-on)
+(set-breakpoint fact-machine 'fact-loop 2)
 
-(set-register-contents! fact-machine 'n 2)
+(set-register-contents! fact-machine 'n 10)
 
 (start fact-machine)
+
+(display "n: ")
+(get-register-contents fact-machine 'n)
+
+(proceed-machine fact-machine)
+
+(display "n: ")
+(get-register-contents fact-machine 'n)
+
+(cancel-all-breakpoints fact-machine)
+
+(proceed-machine fact-machine)
 
 (display "2!: ")
 (get-register-contents fact-machine 'val)
-
-(display "2! instruction count: ")
-(fact-machine 'print-inst-ct)
-
-(fact-machine 'reset-inst-ct)
-
-(fact-machine 'trace-off)
-
-(set-register-contents! fact-machine 'n 4)
-
-(start fact-machine)
-
-(display "4!: ")
-(get-register-contents fact-machine 'val)
-
-(display "4! instruction count: ")
-(fact-machine 'print-inst-ct)

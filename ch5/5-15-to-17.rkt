@@ -203,6 +203,7 @@
 (define (get-register machine reg-name)
   ((machine 'get-register) reg-name))
 
+;; 5.17
 (define (assemble controller-text machine)
   (extract-labels controller-text
     (lambda (insts labels)
@@ -266,10 +267,6 @@
          inst
          proc)
   (set-car! (cdr inst) proc))
-(define (set-instruction-label!
-         inst
-         label-name)
-  (set-car! (cddr inst) label-name))
 
 (define (make-label-entry label-name insts)
   (cons label-name insts))
