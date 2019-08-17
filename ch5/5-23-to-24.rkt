@@ -86,7 +86,12 @@
   (let ((pc (make-register 'pc))
         (flag (make-register 'flag))
         (stack (make-stack))
-        (the-instruction-sequence '()))
+        (the-instruction-sequence '())
+        ;; We _could_ make these registers, too.
+        (inst-ct 0)
+        (trace? false)
+        ;; 5.17: And now we shall.
+        (curr-inst-label (make-register 'curr-inst-label)))
     (let ((the-ops
            (list (list 'initialize-stack
                        (lambda () 
@@ -119,11 +124,17 @@
         (let ((insts (get-contents pc)))
           (if (null? insts)
               'done
-              (begin
-                ;(display (instruction-text (car insts)))
-                ;(newline)
+              (let* ((the-inst (car insts))
+                     (the-inst-text (instruction-text the-inst)))
+                ;; 5.16
+                (if trace?
+                    (begin (display (instruction-label the-inst))
+                           (display ':)
+                           (display the-inst-text)
+                           (newline)))
                 ((instruction-execution-proc 
-                  (car insts)))
+                  the-inst))
+                (set! inst-ct (inc inst-ct)) ; 5.15
                 (execute)))))
       (define (dispatch message)
         (cond ((eq? message 'start)
@@ -151,6 +162,14 @@
               ((eq? message 'stack) stack)
               ((eq? message 'operations) 
                the-ops)
+              ((eq? message 'print-inst-ct) 
+               inst-ct)
+              ((eq? message 'reset-inst-ct)
+               (set! inst-ct 0))
+              ((eq? message 'trace-on) ; 5.15
+               (set! trace? true))
+              ((eq? message 'trace-off)
+               (set! trace? false))
               (else (error "Unknown request: 
                             MACHINE"
                            message))))
@@ -174,16 +193,19 @@
 (define (get-register machine reg-name)
   ((machine 'get-register) reg-name))
 
+;; 5.17
 (define (assemble controller-text machine)
   (extract-labels controller-text
     (lambda (insts labels)
       (update-insts! insts labels machine)
-      insts)))
+      insts)
+    'NO-LABEL))
 
-(define (extract-labels text receive)
+;; 5.17
+(define (extract-labels text receive curr-label)
   (if (null? text)
       (receive '() '())
-      (extract-labels 
+      (extract-labels
        (cdr text)
        (lambda (insts labels)
          (let ((next-inst (car text)))
@@ -197,9 +219,13 @@
                     labels))
                (receive 
                    (cons (make-instruction 
-                          next-inst)
+                          next-inst
+                          curr-label)
                          insts)
-                   labels)))))))
+                   labels))))
+       (if (symbol? (car text))
+           (car text)
+           curr-label))))
 
 (define (update-insts! insts labels machine)
   (let ((pc (get-register machine 'pc))
@@ -220,15 +246,17 @@
          ops)))
      insts)))
 
-(define (make-instruction text)
-  (cons text '()))
+;; 5.17: Modified to include label for instruction
+(define (make-instruction text curr-label)
+  (list text '() curr-label))
 (define (instruction-text inst) (car inst))
 (define (instruction-execution-proc inst)
-  (cdr inst))
+  (cadr inst))
+(define (instruction-label inst) (caddr inst))
 (define (set-instruction-execution-proc!
          inst
          proc)
-  (set-cdr! inst proc))
+  (set-car! (cdr inst) proc))
 
 (define (make-label-entry label-name insts)
   (cons label-name insts))
@@ -795,6 +823,10 @@
 ;;; 5.24
 
 (define (primitive-cond? exp) (tagged-list? exp 'p-cond))
+(define (first-clause clauses) (cadr clauses))
+(define (rest-clauses clauses) (cdr clauses))
+(define (no-clauses? clauses) (null? clauses))
+(define (is-else? pred) (equal? 'else pred))
 
 ;;; The full scheme machine
 (define scheme-machine
@@ -814,11 +846,22 @@
             (list 'lambda-parameters lambda-parameters)
             (list 'lambda-body lambda-body)
             (list 'if? if?)
-            (list 'cond? cond?) ; 5.23
-            (list 'cond->if cond->if) ; 5.23
-            (list 'let? let?) ; 5.23
-            (list 'let->combination let->combination) ; 5.23
-            (list 'primitive-cond? primitive-cond?) ; 5.24
+            ;; 5.23
+            (list 'cond? cond?)
+            (list 'cond->if cond->if)
+            (list 'let? let?)
+            (list 'let->combination let->combination)
+            ;; 5.24
+            (list 'first-clause first-clause)
+            (list 'rest-clauses rest-clauses)
+            (list 'no-clauses? no-clauses?)
+            (list 'is-else? is-else?)
+            (list 'cond-clauses cond-clauses) 
+            (list 'cond-else-clause? cond-else-clause?)
+            (list 'cond-predicate cond-predicate)
+            (list 'cond-actions cond-actions)
+            (list 'primitive-cond? primitive-cond?)
+            
             (list 'if-predicate if-predicate)
             (list 'if-consequent if-consequent)
             (list 'if-alternative if-alternative)
@@ -1029,10 +1072,10 @@
         (restore exp)
         (test (op true?) (reg val))
         (branch (label ev-if-consequent))
-        ev-if-alternative
+      ev-if-alternative
         (assign exp (op if-alternative) (reg exp))
         (goto (label eval-dispatch))
-        ev-if-consequent
+      ev-if-consequent
         (assign exp (op if-consequent) (reg exp))
         (goto (label eval-dispatch))
       ;; 5.23
@@ -1044,7 +1087,37 @@
         (goto (label eval-dispatch))
       ;; 5.24
       ev-p-cond
-        (
+        (assign unev (op cond-clauses) (reg exp)) ; Put all clauses in unev reg.
+        ;(goto (label ev-p-cond-clauses)) ; Not strict necessary.
+      ev-p-cond-clauses
+        (test (op no-clauses?) (reg unev))
+        (branch (label ev-p-cond-empty))
+        (save unev)
+        (assign exp (op first-clause) (reg unev)) ; Look at first clause.
+        (save exp) ; Save clause (predicate & action) so we can access action later.
+        (save continue) ; Save original continue passed to topmost eval.
+        (assign continue (label ev-p-cond-decide))
+        (assign exp (op cond-predicate) (reg exp))
+        (test (op is-else?) (reg exp))     ; If predicate is an else,
+        (assign val (const true))          ; we treat it as true
+        (branch (label ev-p-cond-decide))  ; and proceed as usual.
+        (goto (label eval-dispatch)) ; Eval what's in exp (the predicate).
+      ev-p-cond-decide
+        (restore continue) ; Original continue passed to topmost eval.
+        (restore exp) ; The just evaluated clause.
+        (restore unev) ; All the clauses at first.
+        (test (op true?) (reg val))
+        (branch (label ev-p-cond-done))
+        (assign unev (op rest-clauses) (reg unev)) ; Remove head of unev clauses.
+        (goto (label ev-p-cond-clauses))
+      ev-p-cond-empty
+        (assign val (const false)) ; Returns false if no condition satisfied.
+        (goto (reg continue))
+      ev-p-cond-done
+        (save continue)
+        (assign unev (op cond-actions) (reg exp))
+        (goto (label ev-sequence))
+        
       ev-assignment
         (assign unev 
                 (op assignment-variable)
@@ -1098,10 +1171,11 @@
 ;;; Tests
 
 (define the-global-environment (setup-environment))
-
-;;; 5.22a
-
 (set-register-contents! scheme-machine 'env (get-global-environment))
+;(scheme-machine 'trace-on)
+
+;;; 5.23a
+
 (set-register-contents! scheme-machine 'exp
                         '(cond ((> 1 2) 0)
                                ((> 2 2) 1)
@@ -1109,9 +1183,9 @@
 
 (start scheme-machine)
 
-;;; 5.22b
-
 (get-register-contents scheme-machine 'val)
+
+;;; 5.23b
 
 (set-register-contents! scheme-machine 'exp
                         '(let ((a 1) (b 2))
@@ -1121,15 +1195,25 @@
 
 (start scheme-machine)
 
-;;; 5.23
+(get-register-contents scheme-machine 'val)
+
+;;; 5.24
+
+(set-register-contents! scheme-machine 'exp
+                        '(p-cond ((< 3 2) 1)
+                                 ((= 3 2) 2)
+                                 ((> 3 2) (+ 1 1) 3)
+                                 (else 4)))
+
+(start scheme-machine)
 
 (get-register-contents scheme-machine 'val)
 
 (set-register-contents! scheme-machine 'exp
                         '(let ((a 1) (b 2))
                            (p-cond ((< b a) 'no)
-                                 ((= b a) 'nein)
-                                 (else 'ja))))
+                                   ((= b a) 'nein)
+                                   (else 'ja))))
 
 (start scheme-machine)
 
