@@ -1,12 +1,14 @@
 #lang sicp
 
-;; 5.30.1 Strategy: We have lookup procedures return an tagged list
+;; 5.30.1 Strategy: We have the lookup procedure return a tagged list
 ;; of type "error-code", which then gets checked as early as possible
 ;; in the machine code, so we can immediately go to signal-error.
-;; Only implemented for variable lookup.
+;; Only implemented for variable lookup, but anywhere that calls the error
+;; function (i.e. is implemented as a Scheme program) would need it.
 
 ;; 5.30.2: similar strategy. Only implemented pre-cheking of valid variables
-;; for / and car.
+;; for / and car, but anywhere that errors for the underlying Scheme evaluator
+;; would need it.
 
 (define (make-machine register-names 
                       ops 
