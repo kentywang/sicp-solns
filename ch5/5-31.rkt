@@ -18,6 +18,9 @@ Since (f) is an application, we'll need to save/restore the original env
 before f is applied, as it'll be overwritten by the procedure's env in process
 of its application
 
+EDIT: Actually, since none of the operands make use of the env, we needn't
+preserve it.
+
 Everything else is the same as with the first.
 
 (f (g 'x) y)
