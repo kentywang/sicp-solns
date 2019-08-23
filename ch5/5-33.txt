@@ -52,6 +52,7 @@ primitive-branch32
   (test (op primitive-procedure?) (reg proc))
   (branch (label primitive-branch35))
 compiled-branch36
+  ;; Recursion would happen here, were this the final application.
   (assign continue (label after-call37))
   (assign val (op compiled-procedure-entry) (reg proc))
   (goto (reg val))
