@@ -499,6 +499,7 @@
       (construct-arglist operand-codes)
       (compile-procedure-call target linkage)))))
 
+;; 5.36: Modified
 (define (construct-arglist operand-codes)
   (define (recur operand-codes)
     (if (null? operand-codes)
