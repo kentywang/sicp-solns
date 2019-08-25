@@ -838,7 +838,7 @@
 ;;; The full scheme machine
 (define scheme-machine
   (make-machine
-    '(exp env val continue proc argl unev)
+    '(exp env val continue proc argl unev arg1 arg2)
     (list   (list 'self-evaluating? self-evaluating?)
             (list 'quoted? quoted?)
             (list 'text-of-quotation text-of-quotation)
@@ -913,7 +913,16 @@
             (list 'cons cons)
             (list 'null? null?)
             (list 'false? false?)
-            (list 'true? true?))
+            (list 'true? true?)
+            (list '+ +)
+            (list '- -)
+            (list '* *)
+            (list '= =)
+            (list '/ /)
+            (list '> >)
+            (list '< <)
+            (list 'display (lambda x (apply display x) (newline)))
+            )
     '(
 
       (assign val (op make-compiled-procedure) (label entry1) (reg env))
@@ -921,99 +930,58 @@
       entry1
       (assign env (op compiled-procedure-env) (reg proc))
       (assign env (op extend-environment) (const (n)) (reg argl) (reg env))
-      (save continue)
-      (save env)
-      (assign proc (op lookup-variable-value) (const =) (reg env))
-      (assign val (op lookup-variable-value) (const n) (reg env))
-      (save val)
-      (assign val (const 1))
-      (assign argl (op list) (reg val))
-      (restore val)
-      (assign argl (op cons) (reg val) (reg argl))
-      (test (op primitive-procedure?) (reg proc))
-      (branch (label primitive-branch6))
-      compiled-branch7
-      (assign continue (label after-call8))
-      (assign val (op compiled-procedure-entry) (reg proc))
-      (goto (reg val))
-      primitive-branch6
-      (assign val (op apply-primitive-procedure) (reg proc) (reg argl))
-      after-call8
-      (restore env)
-      (restore continue)
+      (assign arg1 (op lookup-variable-value) (const n) (reg env))
+      (assign arg2 (const 1))
+      (assign val (op =) (reg arg1) (reg arg2))
       (test (op false?) (reg val))
       (branch (label false-branch4))
       true-branch3
       (assign val (const 1))
       (goto (reg continue))
       false-branch4
-      (assign proc (op lookup-variable-value) (const *) (reg env))
       (save continue)
-      (save proc)
-      (assign val (op lookup-variable-value) (const n) (reg env))
-      (save val)
-      (assign proc (op lookup-variable-value) (const factorial-alt) (reg env))
-      (save proc)
-      (assign proc (op lookup-variable-value) (const -) (reg env))
-      (assign val (op lookup-variable-value) (const n) (reg env))
-      (save val)
-      (assign val (const 1))
+      (save env)
+      (assign proc (op lookup-variable-value) (const factorial) (reg env))
+      (assign arg1 (op lookup-variable-value) (const n) (reg env))
+      (assign arg2 (const 1))
+      (assign val (op -) (reg arg1) (reg arg2))
       (assign argl (op list) (reg val))
-      (restore val)
-      (assign argl (op cons) (reg val) (reg argl))
       (test (op primitive-procedure?) (reg proc))
-      (branch (label primitive-branch9))
-      compiled-branch10
-      (assign continue (label after-call11))
+      (branch (label primitive-branch6))
+      compiled-branch7
+      (assign continue (label proc-return9))
       (assign val (op compiled-procedure-entry) (reg proc))
       (goto (reg val))
-      primitive-branch9
-      (assign val (op apply-primitive-procedure) (reg proc) (reg argl))
-      after-call11
-      (assign argl (op list) (reg val))
-      (restore proc)
-      (test (op primitive-procedure?) (reg proc))
-      (branch (label primitive-branch12))
-      compiled-branch13
-      (assign continue (label after-call14))
-      (assign val (op compiled-procedure-entry) (reg proc))
-      (goto (reg val))
-      primitive-branch12
-      (assign val (op apply-primitive-procedure) (reg proc) (reg argl))
-      after-call14
-      (assign argl (op list) (reg val))
-      (restore val)
-      (assign argl (op cons) (reg val) (reg argl))
-      (restore proc)
+      proc-return9
+      (assign arg1 (reg val))
+      (goto (label after-call8))
+      primitive-branch6
+      (assign arg1 (op apply-primitive-procedure) (reg proc) (reg argl))
+      after-call8
+      (restore env)
+      (assign arg2 (op lookup-variable-value) (const n) (reg env))
+      (assign val (op *) (reg arg1) (reg arg2))
       (restore continue)
-      (test (op primitive-procedure?) (reg proc))
-      (branch (label primitive-branch15))
-      compiled-branch16
-      (assign val (op compiled-procedure-entry) (reg proc))
-      (goto (reg val))
-      primitive-branch15
-      (assign val (op apply-primitive-procedure) (reg proc) (reg argl))
       (goto (reg continue))
-      after-call17
       after-if5
       after-lambda2
-      (perform (op define-variable!) (const factorial-alt) (reg val) (reg env))
+      (perform (op define-variable!) (const factorial) (reg val) (reg env))
       (assign val (const ok))
-
+  
       ;; (factorial 4)
-      (assign proc (op lookup-variable-value) (const factorial-alt) (reg env))
-      (assign val (const 4))
+      (assign proc (op lookup-variable-value) (const factorial) (reg env))
+      (assign val (const 7))
       (assign argl (op list) (reg val))
       (test (op primitive-procedure?) (reg proc))
-      (branch (label primitive-branch18))
-      compiled-branch19
-      (assign continue (label after-call20))
+      (branch (label primitive-branch10))
+    compiled-branch11
+      (assign continue (label after-call12))
       (assign val (op compiled-procedure-entry) (reg proc))
       (goto (reg val))
-      primitive-branch18
+    primitive-branch10
       (assign val (op apply-primitive-procedure) (reg proc) (reg argl))
-      after-call20
-
+    after-call12
+      
       )))
 
 ;;; Tests
