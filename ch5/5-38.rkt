@@ -6,8 +6,9 @@
 
 (define (spread-arguments operands)
   ;; This took me 16 hours! Basically, the first operand could modify
-  ;; the env and continue, so we need to preserve them.
-  (preserving '(env continue)
+  ;; the env so we need to preserve it. We don't need to preserve continue
+  ;; though, because end-with-linkage always ensures it is preserved.
+  (preserving '(env)
    (compile (car operands) 'arg1 'next)
    (preserving
     '(arg1)
