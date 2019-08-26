@@ -1,5 +1,10 @@
 #lang sicp
 
+;; Since the Lisp primitives are in the global env (i.e. *, +, etc.), they
+;; don't exist in the compile-time env and thus won't be found with
+;; lexical-address-lookup, so the default lookup-variable-value will find
+;; them.
+
 ;;; 5.39
 
 ;;; Constructor
@@ -44,7 +49,7 @@
              (make-lexical-addr frame-no displacement-no))
             (else (scan (cdr vars) (+ displacement-no 1)))))
     (if (eq? env the-empty-environment)
-        (error "Variable not found" var)
+        'not-found
         (let ((frame (first-frame env)))
           (scan frame 0))))
   (env-loop env 0))
@@ -340,7 +345,7 @@
         ((assignment? exp)
          (compile-assignment exp target linkage env))
         ((definition? exp)
-         (compile-definition exp target linkage env))
+         (compile-definition exp target linkage))
         ((if? exp) (compile-if exp target linkage env))
         ((lambda? exp) (compile-lambda exp target linkage env))
         ((begin? exp)
@@ -394,28 +399,46 @@
    (make-instruction-sequence '() (list target)
     `((assign ,target (const ,(text-of-quotation exp)))))))
 
+;; 5.42
 (define (compile-variable exp target linkage env)
-  (end-with-linkage linkage
-   (make-instruction-sequence '(env) (list target)
-    `((assign ,target
-              (op lexical-address-lookup)
-              (const ,exp)
-              (reg env))))))
+  (let ((addr (find-variable exp env)))
+    (end-with-linkage
+     linkage
+     (make-instruction-sequence
+      '(env)
+      (list target)
+      (if (eq? addr 'not-found)
+          `((assign ,target
+                    (op lookup-variable-value)
+                    (const ,exp)
+                    (reg env)))
+          `((assign ,target
+                    (op lexical-address-lookup)
+                    (const ,addr)
+                    (reg env))))))))
 
-(define (compile-assignment exp target linkage)
-  (let ((var (assignment-variable exp))
-        (get-value-code
-         (compile (assignment-value exp) 'val 'next)))
+;; 5.42
+(define (compile-assignment exp target linkage env)
+  (let* ((var (assignment-variable exp))
+         (get-value-code
+          (compile (assignment-value exp) 'val 'next env))
+         (addr (find-variable var env)))
     (end-with-linkage linkage
      (preserving '(env)
       get-value-code
       (make-instruction-sequence '(env val) (list target)
-       `((perform (op set-variable-value!)
-                  (const ,var)
-                  (reg val)
-                  (reg env))
-         (assign ,target (const ok))))))))
+       (if (eq? addr 'not-found)
+           `((perform (op set-variable-value!)
+                      (const ,var)
+                      (reg val)
+                      (reg env))
+             (assign ,target (const ok)))
+           `((perform (op lexical-address-set!)
+                      (const ,addr)
+                      (reg val)
+                      (reg env)))))))))
 
+;; Unchanged right now.
 (define (compile-definition exp target linkage)
   (let ((var (definition-variable exp))
         (get-value-code
@@ -446,18 +469,18 @@
                    (number->string (new-label-number)))))
 ;; end of footnote
 
-(define (compile-if exp target linkage)
+(define (compile-if exp target linkage env)
   (let ((t-branch (make-label 'true-branch))
         (f-branch (make-label 'false-branch))                    
         (after-if (make-label 'after-if)))
     (let ((consequent-linkage
            (if (eq? linkage 'next) after-if linkage)))
-      (let ((p-code (compile (if-predicate exp) 'val 'next))
+      (let ((p-code (compile (if-predicate exp) 'val 'next env))
             (c-code
              (compile
-              (if-consequent exp) target consequent-linkage))
+              (if-consequent exp) target consequent-linkage env))
             (a-code
-             (compile (if-alternative exp) target linkage)))
+             (compile (if-alternative exp) target linkage env)))
         (preserving '(env continue)
          p-code
          (append-instruction-sequences
@@ -471,16 +494,16 @@
 
 ;;; sequences
 
-(define (compile-sequence seq target linkage)
+(define (compile-sequence seq target linkage env)
   (if (last-exp? seq)
-      (compile (first-exp seq) target linkage)
+      (compile (first-exp seq) target linkage env)
       (preserving '(env continue)
-       (compile (first-exp seq) target 'next)
-       (compile-sequence (rest-exps seq) target linkage))))
+       (compile (first-exp seq) target 'next env)
+       (compile-sequence (rest-exps seq) target linkage env))))
 
 ;;;lambda expressions
 
-(define (compile-lambda exp target linkage)
+(define (compile-lambda exp target linkage env)
   (let ((proc-entry (make-label 'entry))
         (after-lambda (make-label 'after-lambda)))
     (let ((lambda-linkage
@@ -493,11 +516,12 @@
                     (op make-compiled-procedure)
                     (label ,proc-entry)
                     (reg env)))))
-        (compile-lambda-body exp proc-entry))
+        (compile-lambda-body exp proc-entry env))
        after-lambda))))
 
-(define (compile-lambda-body exp proc-entry)
-  (let ((formals (lambda-parameters exp)))
+(define (compile-lambda-body exp proc-entry env)
+  (let* ((formals (lambda-parameters exp))
+         (new-env (cons formals env)))
     (append-instruction-sequences
      (make-instruction-sequence '(env proc argl) '(env)
       `(,proc-entry
@@ -507,17 +531,17 @@
                 (const ,formals)
                 (reg argl)
                 (reg env))))
-     (compile-sequence (lambda-body exp) 'val 'return))))
+     (compile-sequence (lambda-body exp) 'val 'return new-env))))
 
 
 ;;;SECTION 5.5.3
 
 ;;;combinations
 
-(define (compile-application exp target linkage)
-  (let ((proc-code (compile (operator exp) 'proc 'next))
+(define (compile-application exp target linkage env)
+  (let ((proc-code (compile (operator exp) 'proc 'next env))
         (operand-codes
-         (map (lambda (operand) (compile operand 'val 'next))
+         (map (lambda (operand) (compile operand 'val 'next env))
               (operands exp))))
     (preserving '(env continue)
      proc-code
@@ -705,3 +729,21 @@
 
 (find-variable 
  'c '((y z) (a b c d e) (x y))) ; (1 2)
+
+(compile '((lambda (x y)
+             ((lambda (a b c d e)
+                ((lambda (y z) (* x y z))
+                 (* a b x)
+                 (+ c d x))) 1 2 5 6 7))
+             3
+             4)
+           'val
+           'next
+           '()) ; Successfully returns 252.
+
+(compile '((lambda (x y)
+             (set! y 100)
+             (* x y)) 2 3)
+         'val
+         'next
+         '()) ; Should return 200, not 6.
