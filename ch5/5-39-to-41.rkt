@@ -1,12 +1,22 @@
 #lang sicp
 
-;;; New
+;;; 5.39
+
+;;; Constructor
+
+(define (make-lexical-addr frame-no displacement-no)
+  (cons frame-no displacement-no))
+
+;;; Selectors
+
+(define (frame-no addr) (car addr))
+(define (displacement-no addr) (cdr addr))
+
+;;; Main
 
 (define (lexical-address-lookup addr env)
-  (let* ((frame-no (car addr))
-         (displacement-no (cdr addr))
-         (frame (list-ref env frame-no))
-         (val (list-ref (frame-values frame) displacement-no)))
+  (let* ((frame (list-ref env (frame-no addr)))
+         (val (list-ref (frame-values frame) (displacement-no addr))))
     (if (eq? val '*unassigned*)
         (error "Scanned-out internal definitions not allowed")
         val)))
@@ -16,11 +26,28 @@
     (if (= n 0)
         lst
         (enumerate-times (- n 1) (cdr lst))))
-  (let* ((frame-no (car addr))
-        (displacement-no (cdr addr))
-        (frame (list-ref env frame-no)))
-    (set-car! (enumerate-times displacement-no (frame-values frame))
+  (let ((frame (list-ref env (frame-no addr))))
+    (set-car! (enumerate-times
+               (displacement-no addr)
+               (frame-values frame))
               val)))
+
+;;; 5.41
+
+;; Very similar to lookup-variable-value.
+(define (find-variable var env) ; Compile-time env.
+  (define (env-loop env frame-no)
+    (define (scan vars displacement-no)
+      (cond ((null? vars)
+             (env-loop (enclosing-environment env) (+ frame-no 1)))
+            ((eq? var (car vars))
+             (make-lexical-addr frame-no displacement-no))
+            (else (scan (cdr vars) (+ displacement-no 1)))))
+    (if (eq? env the-empty-environment)
+        (error "Variable not found" var)
+        (let ((frame (first-frame env)))
+          (scan frame 0))))
+  (env-loop env 0))
 
 ;;; Old
 
@@ -303,25 +330,27 @@
 
 ;;;SECTION 5.5.1
 
-(define (compile exp target linkage)
+;; 5.40
+(define (compile exp target linkage env) ; Compile-time env.
   (cond ((self-evaluating? exp)
          (compile-self-evaluating exp target linkage))
         ((quoted? exp) (compile-quoted exp target linkage))
         ((variable? exp)
-         (compile-variable exp target linkage))
+         (compile-variable exp target linkage env))
         ((assignment? exp)
-         (compile-assignment exp target linkage))
+         (compile-assignment exp target linkage env))
         ((definition? exp)
-         (compile-definition exp target linkage))
-        ((if? exp) (compile-if exp target linkage))
-        ((lambda? exp) (compile-lambda exp target linkage))
+         (compile-definition exp target linkage env))
+        ((if? exp) (compile-if exp target linkage env))
+        ((lambda? exp) (compile-lambda exp target linkage env))
         ((begin? exp)
          (compile-sequence (begin-actions exp)
                            target
-                           linkage))
-        ((cond? exp) (compile (cond->if exp) target linkage))
+                           linkage
+                           env))
+        ((cond? exp) (compile (cond->if exp) target linkage env))
         ((application? exp)
-         (compile-application exp target linkage))
+         (compile-application exp target linkage env))
         (else
          (error "Unknown expression type -- COMPILE" exp))))
 
@@ -365,11 +394,11 @@
    (make-instruction-sequence '() (list target)
     `((assign ,target (const ,(text-of-quotation exp)))))))
 
-(define (compile-variable exp target linkage)
+(define (compile-variable exp target linkage env)
   (end-with-linkage linkage
    (make-instruction-sequence '(env) (list target)
     `((assign ,target
-              (op lookup-variable-value)
+              (op lexical-address-lookup)
               (const ,exp)
               (reg env))))))
 
@@ -673,3 +702,6 @@
 (lexical-address-lookup (cons 1 1) x) ; 5
 (lexical-address-set! (cons 0 2) 9 x)
 (lexical-address-lookup (cons 0 2) x) ; 9
+
+(find-variable 
+ 'c '((y z) (a b c d e) (x y))) ; (1 2)
