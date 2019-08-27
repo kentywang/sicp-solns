@@ -54,6 +54,34 @@
           (scan frame 0))))
   (env-loop env 0))
 
+;;; 5.43: Modified from my 4.16 from let to lambda.
+
+(define (scan-out-defines body)
+  (define (iter body defs rest)
+    (if (null? body)
+        (rebuild defs (reverse rest)) ; Reverse due to cons body sequence.
+        (if (definition? (car body))
+            (iter (cdr body)
+                  (cons (car body) defs)
+                  rest)
+            (iter (cdr body)
+                  defs
+                  (cons (car body) rest)))))
+  (define (rebuild defs rest)
+    (if (null? defs) ; If there are no defs, don't start an endless loop
+        body         ; by creating a lambda for any lambda body.
+        (list (cons (make-lambda (map definition-variable defs)
+                                 (append (make-sets defs) rest))
+                    (map (lambda (_) ''*unassigned*) defs)))))
+  (define (make-sets defs)
+    (if (null? defs)
+        '()
+        (cons (list 'set!
+                    (definition-variable (car defs))
+                    (definition-value (car defs)))
+              (make-sets (cdr defs)))))
+  (iter body '() '()))
+
 ;;; Old
 
 (define (self-evaluating? exp)
@@ -516,6 +544,7 @@
                     (op make-compiled-procedure)
                     (label ,proc-entry)
                     (reg env)))))
+        ;; 5.43
         (compile-lambda-body exp proc-entry env))
        after-lambda))))
 
@@ -531,7 +560,7 @@
                 (const ,formals)
                 (reg argl)
                 (reg env))))
-     (compile-sequence (lambda-body exp) 'val 'return new-env))))
+     (compile-sequence (scan-out-defines (lambda-body exp)) 'val 'return new-env))))
 
 
 ;;;SECTION 5.5.3
@@ -730,6 +759,8 @@
 (find-variable 
  'c '((y z) (a b c d e) (x y))) ; (1 2)
 
+(display "Compile test 1")(newline)(newline)
+
 (compile '((lambda (x y)
              ((lambda (a b c d e)
                 ((lambda (y z) (* x y z))
@@ -741,9 +772,29 @@
            'next
            '()) ; Successfully returns 252.
 
+(display "Compile test 2")(newline)(newline)
+
 (compile '((lambda (x y)
              (set! y 100)
              (* x y)) 2 3)
          'val
          'next
          '()) ; Should return 200, not 6.
+
+(display "Compile test 3")(newline)(newline)
+
+;; Equivalent to:
+;((lambda ()
+;   ((lambda (u v)
+;      (set! u 1)
+;      (set! v 2)
+;      (+ u v))
+;    '*unassigned*
+;    '*unassigned*)))
+(compile '((lambda ()
+             (define u 1)
+             (define v 2)
+             (+ u v)))
+         'val
+         'next
+         '())
