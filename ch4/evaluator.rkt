@@ -5,9 +5,6 @@
 ;;; Eval
 
 (define (eval exp env)
-;  (display "eval: ")
-;  (display exp)
-;  (newline)
   (cond ((self-evaluating? exp)
          exp)
         ((variable? exp)
