@@ -21,7 +21,8 @@
 ;; A new change we need to do now is, similar to the map issue above, to
 ;; create an interpreted version of the apply procedure. We did this in the
 ;; original metacircular evaluator as "apply-in-underlying-scheme", but we'll
-;; need to do it on another layer now (what layer? why?)
+;; need to do it again to account for the additional type tag wrapping of the
+;; underlying primitive procedure supplied by the register machine environment.
 
 (define (make-machine register-names 
                       ops 

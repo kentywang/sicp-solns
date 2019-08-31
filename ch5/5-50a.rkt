@@ -3,8 +3,8 @@
 ;; Changes:
 ;; Converted lets to lambda applications.
 ;; Defined interpreted version of map procedure.
-;; Defined intrepreted version of apply procedure to handle interpreted
-;; primitive procedures.
+;; Defined intrepreted version of apply procedure to handle the two layers
+;; of type tagging (i.e. "(primitive (primitive #<procedure:+>))").
 
 (define (self-evaluating? exp)
   (cond ((number? exp) true)
