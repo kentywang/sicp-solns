@@ -5,6 +5,8 @@
 
 #define MEMORYLIMIT 1000
 
+typedef enum boolean Boolean;
+
 typedef enum type Type;
 typedef union value Value;
 typedef struct element Element;
@@ -12,6 +14,12 @@ typedef struct pair Pair;
 
 enum error_codes {
   BAD_IDENTIFIER
+};
+
+// Be explicit that false should be 0.
+enum boolean {
+  FALSE = 0,
+  TRUE = 1
 };
 
 // Members of enum and union must be in same corresponding order for initial
@@ -26,7 +34,7 @@ struct element {
   } type_tag;
   union value {
     Pair *pair_ptr;
-    double number;
+    int number;
     char *symbol;
     // Need to store string too.
   } contents;
@@ -71,6 +79,7 @@ Tests:
   (1(  2  3  )4)
    (1 2 3)
     (1 2 (3 4 (5)) 6 7)
+    (1(  -2  3a  )4)
 
 Lessons learned:
 - For mutating an object's pointer member, I can't pass the pointer into
@@ -111,6 +120,7 @@ void read_eval_print_loop(void)
 
 void read_input(Element *e)
 {
+  Boolean is_integer(char *s);
   void print_element(Element *);
   void read_parens(Element *);
   char *read_word(int);
@@ -134,15 +144,23 @@ void read_input(Element *e)
     // printf("\n");
     return;
   }
-  else if (c != ')') {
+  else if (isalnum(c) || c == '-') {
     printf("read_input\n  %c\n", c);
+    char *s = read_word(1);
+
+    if (is_integer(s)) {
+      e->type_tag = NUMBER;
+      e->contents.number = atoi(s);
+      return;
+    }
+
     e->type_tag = SYMBOL;
-    e->contents.symbol = read_word(1);
-    // What about numbers?
+    e->contents.symbol = s;
     return;
   }
 
-  fprintf(stderr, "Bad identifier.\n");
+  // Everything else.
+  fprintf(stderr, "Bad identifier: %c\n", c);
   exit(BAD_IDENTIFIER);
 }
 
@@ -158,7 +176,7 @@ char *read_word(int count)
     c == '(' ||
     c == ')'
   ) {
-    printf("read_word\n  found EOF/WS/(/).\n");
+    printf("read_word\n found ending condition\n");
 
     // Do something with EOF here.
 
@@ -175,6 +193,7 @@ char *read_word(int count)
 
 void read_parens(Element *e)
 {
+  Boolean is_integer(char *s);
   void print_pair(Pair *p);
 
   Pair *read_cdr(Pair *);
@@ -204,10 +223,20 @@ void read_parens(Element *e)
     read_parens(&p->car);
   } else {
     printf("read_parens\n  %c\n", c);
-    p->car.type_tag = SYMBOL;
-    p->car.contents.symbol = read_word(1);
 
-    // We know read_word put ) in the buffer, so we skip over it.
+    // Almost the same as in read_input. Is there an abstraction here?
+    char *s = read_word(1);
+
+    if (is_integer(s)) {
+      p->car.type_tag = NUMBER;
+      p->car.contents.number = atoi(s);
+    } else {
+      p->car.type_tag = SYMBOL;
+      p->car.contents.symbol = s;
+    }
+
+    // If this was the last word in the list, we know read_word put ) in the
+    // buffer, so we skip over it.
     getch();
   }
 
@@ -244,6 +273,16 @@ char *create_symbol(int size)
   printf("create_symbol\n  \"%s\", size: %d\n", s, size);
 
   return s;
+}
+
+int get_number(int size)
+{
+  char s[size];
+
+  buffered_seek(size);
+  fgets(s, size + 1, stdin);
+
+  return atoi(s);
 }
 
 // When not full, just the next element in array. Otherwise need to garbage
@@ -296,7 +335,6 @@ void buffered_seek(int n)
   fseek(stdin, -n - (char_buffer ? 1 : 0), SEEK_CUR);
 }
 
-
 /////////////////////////////////////////////////////////////////////////////
 
 void print_pair(Pair *p)
@@ -321,7 +359,7 @@ void print_element(Element *e)
         printf("nil");
       break;
     case NUMBER:
-      printf("%f", e->contents.number);
+      printf("%d", e->contents.number);
       break;
     case SYMBOL:
       printf("%s", e->contents.symbol);
@@ -331,4 +369,17 @@ void print_element(Element *e)
   } else
     // We shouldn't get here unless GC.
     printf("Uh-oh.\n");
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+Boolean is_integer(char *s)
+{
+  if (*s == '-')
+    s++;
+
+  while (*s)
+    if (!isdigit(*s++))
+      return FALSE;
+  return TRUE;
 }
